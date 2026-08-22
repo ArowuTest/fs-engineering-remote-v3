@@ -4,6 +4,7 @@ const claimBody=z.object({leaseMs:z.number().int().min(5000).max(900000).default
 export function registerNodeRoutes(app:FastifyInstance,config:AppConfig){const nodes=new NodeRegistry();const admin=async(req:any,reply:any)=>{if(req.headers.authorization!==`Bearer ${config.actionsSecret}`)await reply.code(401).send({error:'Unauthorized.'})};const nodeAuth=(req:any)=>{const id=String(req.headers['x-fs-node-id']??''),secret=String(req.headers['x-fs-node-secret']??'');if(!id||!secret)throw new Error('Node credentials required.');return {id,secret}};
  app.post('/node/register',{preHandler:admin},async(req)=>nodes.register(regBody.parse(req.body)));
  app.get('/node/list',{preHandler:admin},async()=>nodes.list());
+ app.get('/node/job/:id',{preHandler:admin},async(req:any)=>nodes.getJob(String(req.params.id)));
  app.post('/node/enqueue',{preHandler:admin},async(req)=>nodes.enqueue(enqueueBody.parse(req.body)));
  app.post('/node/claim',async(req,reply)=>{try{const a=nodeAuth(req),b=claimBody.parse(req.body);return await nodes.claim(a.id,a.secret,b.leaseMs)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
  app.post('/node/complete',async(req,reply)=>{try{const a=nodeAuth(req),b=doneBody.parse(req.body);return await nodes.complete(a.id,a.secret,b.jobId,b.leaseToken,b.result,b.status)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
