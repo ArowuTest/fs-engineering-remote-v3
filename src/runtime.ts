@@ -1,0 +1,5 @@
+import path from 'node:path';import os from 'node:os';import crypto from 'node:crypto';
+export interface RuntimeIdentity{instanceId:string;instanceName:string;stateRoot:string;host:string;pid:number;startedAt:string}
+function clean(v:string){const x=v.trim().replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');if(!x)throw new Error('Invalid FS Remote instance identifier.');return x.slice(0,80)}
+export function runtimeIdentity(){const envId=process.env.FS_REMOTE_INSTANCE_ID;const name=clean(process.env.FS_REMOTE_INSTANCE_NAME??envId??'v2-default');const instanceId=clean(envId??name);const stateBase=process.env.FS_REMOTE_STATE_ROOT?path.resolve(process.env.FS_REMOTE_STATE_ROOT):path.resolve('.agent-runtime','instances');return {instanceId,instanceName:name,stateRoot:path.join(stateBase,instanceId),host:os.hostname(),pid:process.pid,startedAt:new Date().toISOString()} satisfies RuntimeIdentity}
+export function executorId(identity:RuntimeIdentity){return `${identity.instanceId}-${identity.host}-${identity.pid}-${crypto.randomBytes(3).toString('hex')}`}

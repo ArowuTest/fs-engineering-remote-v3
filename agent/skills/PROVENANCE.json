@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "fs-remote.skill-provenance.v1",
+  "policy": "Curated external skills are vendored snapshots. Evaluate before substantial use; upstream instructions never override FS Remote security or runtime policy.",
+  "sources": [
+    {"prefix":"wondel-","repository":"https://github.com/wondelai/skills","license":"MIT","purpose":"product discovery, analytics and UX"},
+    {"prefix":"superpowers-","repository":"https://github.com/obra/superpowers","license":"MIT","purpose":"debugging, verification and isolated engineering workflow"},
+    {"prefix":"stitch-","repository":"https://github.com/google-labs-code/stitch-skills","license":"Apache-2.0","purpose":"design systems and React Native/design handoff","runtimeDependency":"Some workflows require a separately configured Stitch MCP; skill presence does not imply that service is available."},
+    {"prefix":"android-official-","repository":"https://github.com/android/skills","license":"Apache-2.0","purpose":"authoritative Android adaptive UI, edge-to-edge and testing guidance"},
+    {"prefix":"local-mobile-","repository":"local user skill estate","license":"local","purpose":"mobile specialist guidance already present on the governed workstation"}
+  ]
+}

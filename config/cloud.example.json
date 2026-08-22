@@ -1,0 +1,9 @@
+{
+  "host": "0.0.0.0",
+  "port": 3000,
+  "commandTimeoutMs": 120000,
+  "maxOutputBytes": 2097152,
+  "shell": "auto",
+  "roots": {},
+  "diagnosticsExternalBaseUrl": "https://replace-after-provisioning.example"
+}

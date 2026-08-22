@@ -1,0 +1,7 @@
+{
+  "type": "cloudflare",
+  "publicBaseUrl": "https://pc-name.fs-mcp.com",
+  "cloudflaredPath": "C:\\Program Files (x86)\\cloudflared\\cloudflared.exe",
+  "configPath": "C:\\Users\\YOUR_USER\\.cloudflared\\config.yml",
+  "tunnelName": "fs-remote-mcp-PCNAME"
+}

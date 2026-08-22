@@ -1,0 +1,19 @@
+import { spawn } from 'node:child_process';
+
+export type DatabaseEnvironment='development'|'staging'|'production';
+export type DatabaseAction='health'|'schema'|'query'|'explain';
+export interface DatabaseRequest{connectionEnv:string;environment:DatabaseEnvironment;action:DatabaseAction;sql?:string;allowProductionWrite?:boolean}
+
+const writePattern=/\b(insert|update|delete|merge|alter|create|drop|truncate|grant|revoke|comment|vacuum|reindex|cluster|refresh|call|do|copy)\b/i;
+const dangerous=/\b(drop\s+database|drop\s+schema|truncate|grant|revoke)\b/i;
+function safeEnvName(name:string){if(!/^[A-Z][A-Z0-9_]*$/.test(name))throw new Error('connectionEnv must be an uppercase environment variable name.');return name;}
+function quoteIdent(v:string){return '"'+v.replaceAll('"','""')+'"';}
+export class DatabaseManager{
+  capabilities(){return {engines:['postgresql'],operations:['health','schema','query','explain'],connectionModel:'environment_variable',policy:{development:'read/write available through governed query policy',staging:'read-only by default',production:'read-only by default; writes require explicit approval and remain restricted'},providerNeutral:true};}
+  private connection(name:string){const key=safeEnvName(name);const value=process.env[key];if(!value)throw new Error(`Database connection environment variable '${key}' is not configured.`);return value;}
+  private assertSql(sql:string,environment:DatabaseEnvironment,allowProductionWrite=false){const trimmed=sql.trim();if(!trimmed)throw new Error('sql is required.');if(trimmed.includes('\0'))throw new Error('Invalid SQL.');const write=writePattern.test(trimmed);if(dangerous.test(trimmed))throw new Error('Destructive or privilege-changing SQL is not allowed through database intelligence. Use an approved migration workflow.');if(environment==='staging'&&write)throw new Error('Staging database queries are read-only through database intelligence.');if(environment==='production'&&write&&!allowProductionWrite)throw new Error('Production database queries are read-only by default; explicit production-write approval is required.');return {write};}
+  private async psql(connection:string,args:string[],timeoutMs=30000){return await new Promise<{exitCode:number|null;stdout:string;stderr:string;timedOut:boolean}>((resolve,reject)=>{const child=spawn('psql',[connection,'-X','--no-psqlrc','-v','ON_ERROR_STOP=1',...args],{windowsHide:true,env:{...process.env,PGCONNECT_TIMEOUT:'10'}});let stdout='',stderr='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;child.kill();},timeoutMs);child.stdout.on('data',d=>stdout+=d.toString());child.stderr.on('data',d=>stderr+=d.toString());child.on('error',reject);child.on('close',code=>{clearTimeout(timer);resolve({exitCode:code,stdout,stderr,timedOut});});});}
+  async run(req:DatabaseRequest){const connection=this.connection(req.connectionEnv);if(req.action==='health'){const r=await this.psql(connection,['-At','-c','select current_database(), current_user, version();']);return {engine:'postgresql',environment:req.environment,healthy:r.exitCode===0&&!r.timedOut,exitCode:r.exitCode,stdout:r.stdout,stderr:r.stderr,timedOut:r.timedOut};}
+    if(req.action==='schema'){const sql=`select table_schema,table_name,table_type from information_schema.tables where table_schema not in ('pg_catalog','information_schema') order by table_schema,table_name;`;const r=await this.psql(connection,['-P','pager=off','-F','\t','-At','-c',sql]);return {engine:'postgresql',environment:req.environment,...r};}
+    const sql=req.sql??'';this.assertSql(sql,req.environment,!!req.allowProductionWrite);const actual=req.action==='explain'?`EXPLAIN (FORMAT JSON, COSTS TRUE, VERBOSE FALSE) ${sql}`:sql;const r=await this.psql(connection,['-P','pager=off','-F','\t','-At','-c',actual]);return {engine:'postgresql',environment:req.environment,operation:req.action,...r};}
+}

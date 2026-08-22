@@ -1,0 +1,4 @@
+tunnel: 7aa40944-0cbe-45cc-93a9-e2fa8dc325c0
+credentials-file: C:\Users\sanus\.cloudflared\7aa40944-0cbe-45cc-93a9-e2fa8dc325c0.json
+ingress:
+  - service: http://127.0.0.1:8766

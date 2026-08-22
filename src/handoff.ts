@@ -1,0 +1,8 @@
+import fs from 'node:fs/promises';import path from 'node:path';import crypto from 'node:crypto';
+export interface MissionHandoff{schemaVersion:'fs-remote.handoff.v1';id:string;missionId:string;alias?:string;createdAt:string;goal:string;currentStepId?:string;completed:string[];decisions:string[];blockers:string[];pendingQuestions:string[];nextActions:string[];branch?:string;head?:string;notes?:string;metadata:Record<string,unknown>}
+function clean(v:string){if(!/^[A-Za-z0-9._-]+$/.test(v))throw new Error('Invalid mission/alias identifier.');return v}
+export class HandoffStore{constructor(private readonly missionBase:string){} private dir(id:string){return path.join(this.missionBase,clean(id))}
+ async save(input:Omit<MissionHandoff,'schemaVersion'|'id'|'createdAt'>){const record:MissionHandoff={schemaVersion:'fs-remote.handoff.v1',id:`handoff-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,createdAt:new Date().toISOString(),...input};const d=path.join(this.dir(input.missionId),'handoffs');await fs.mkdir(d,{recursive:true});await fs.writeFile(path.join(d,`${record.id}.json`),JSON.stringify(record,null,2),'utf8');await fs.writeFile(path.join(this.dir(input.missionId),'latest-handoff.json'),JSON.stringify(record,null,2),'utf8');return record}
+ async latest(missionId:string){try{return JSON.parse(await fs.readFile(path.join(this.dir(missionId),'latest-handoff.json'),'utf8')) as MissionHandoff}catch{return null}}
+ async list(missionId:string){try{const d=path.join(this.dir(missionId),'handoffs'),names=(await fs.readdir(d)).filter(x=>x.endsWith('.json')).sort().reverse();return Promise.all(names.map(async n=>JSON.parse(await fs.readFile(path.join(d,n),'utf8')) as MissionHandoff))}catch{return []}}
+}

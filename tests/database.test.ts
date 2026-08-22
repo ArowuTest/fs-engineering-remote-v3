@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseManager} from '../src/database.js';
+const db=new DatabaseManager();
+test('database capability is provider neutral and PostgreSQL-first',()=>{const c=db.capabilities();assert.equal(c.providerNeutral,true);assert.ok(c.engines.includes('postgresql'));assert.ok(c.operations.includes('explain'));});
+test('database connection secret must be referenced by env name',async()=>{await assert.rejects(()=>db.run({action:'health',connectionEnv:'not-a-valid-env',environment:'development'}),/uppercase environment variable/);});
+test('missing database secret is reported without exposing a value',async()=>{delete process.env.FS_REMOTE_TEST_DB_URL;await assert.rejects(()=>db.run({action:'health',connectionEnv:'FS_REMOTE_TEST_DB_URL',environment:'development'}),/is not configured/);});
+test('production write is denied by default before connection execution',async()=>{process.env.FS_REMOTE_TEST_DB_URL='postgresql://invalid.invalid/db';await assert.rejects(()=>db.run({action:'query',connectionEnv:'FS_REMOTE_TEST_DB_URL',environment:'production',sql:'update users set name=\'x\''}),/read-only by default/);delete process.env.FS_REMOTE_TEST_DB_URL;});
+test('destructive SQL is denied even in development',async()=>{process.env.FS_REMOTE_TEST_DB_URL='postgresql://invalid.invalid/db';await assert.rejects(()=>db.run({action:'query',connectionEnv:'FS_REMOTE_TEST_DB_URL',environment:'development',sql:'drop database example'}),/not allowed/);delete process.env.FS_REMOTE_TEST_DB_URL;});

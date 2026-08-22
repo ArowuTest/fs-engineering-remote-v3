@@ -1,0 +1,17 @@
+{
+  "host": "127.0.0.1",
+  "port": 8765,
+  "endpointSecret": "REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS",
+  "actionsSecret": "REPLACE_WITH_A_DIFFERENT_32_PLUS_CHARACTER_SECRET",
+  "commandTimeoutMs": 120000,
+  "maxOutputBytes": 2000000,
+  "shell": "powershell.exe",
+  "roots": [
+    {
+      "name": "example-project",
+      "path": "C:\\path\\to\\project",
+      "readOnly": false,
+      "allowSecrets": false
+    }
+  ]
+}
