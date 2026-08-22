@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {NodeRegistry} from '../src/nodes.js';
+test('node registry refuses without durable database',async()=>{const old=process.env.DATABASE_URL;delete process.env.DATABASE_URL;try{await assert.rejects(()=>new NodeRegistry().register({nodeId:'n1',name:'node',platform:'win32',capabilities:['git'],projects:[]}));}finally{if(old)process.env.DATABASE_URL=old}});

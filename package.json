@@ -6,7 +6,8 @@
     "test": "tsx --test tests/**/*.test.ts",
     "start": "tsx src/index.ts",
     "worker": "tsx src/executor-main.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "node:agent": "tsx src/node-main.ts"
   },
   "keywords": [],
   "author": "",

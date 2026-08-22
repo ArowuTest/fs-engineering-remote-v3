@@ -7,6 +7,7 @@ import { createRemoteOperations } from './operations.js';
 import { ProcessManager } from './processes.js';
 import { createRemoteServer } from './server.js';
 import { databaseHealth } from './db.js';
+import { registerNodeRoutes } from './node-http.js';
 
 export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
@@ -38,6 +39,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
     };
   });
   registerActionsRoutes(app, config, operations);
+  registerNodeRoutes(app, config);
 
   app.all(`/mcp/${config.endpointSecret}`, async (request, reply) => {
     await nodeHandler(request.raw, reply.raw, request.body);
