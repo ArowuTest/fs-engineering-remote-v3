@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {modelReliability,recordModelFailure,recordModelSuccess,resetModelHealth} from '../src/model-health.js';
+test('model timeout degrades reliability and success recovers evidence',()=>{resetModelHealth();assert.equal(modelReliability('m'),1);recordModelFailure('m',new Error('reviewer timed out'));assert.equal(modelReliability('m'),0);recordModelSuccess('m');assert.equal(modelReliability('m'),.25)});
