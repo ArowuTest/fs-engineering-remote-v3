@@ -6,6 +6,8 @@ export function registerNodeRoutes(app:FastifyInstance,config:AppConfig){const n
  app.get('/node/list',{preHandler:admin},async()=>nodes.list());
  app.get('/node/job/:id',{preHandler:admin},async(req:any)=>nodes.getJob(String(req.params.id)));
  app.post('/node/enqueue',{preHandler:admin},async(req)=>nodes.enqueue(enqueueBody.parse(req.body)));
+ app.post('/node/heartbeat',async(req,reply)=>{try{const a=nodeAuth(req);return await nodes.heartbeat(a.id,a.secret)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
+ app.post('/node/recover',{preHandler:admin},async()=>nodes.recover());
  app.post('/node/claim',async(req,reply)=>{try{const a=nodeAuth(req),b=claimBody.parse(req.body);return await nodes.claim(a.id,a.secret,b.leaseMs)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
  app.post('/node/complete',async(req,reply)=>{try{const a=nodeAuth(req),b=doneBody.parse(req.body);return await nodes.complete(a.id,a.secret,b.jobId,b.leaseToken,b.result,b.status)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
 }
