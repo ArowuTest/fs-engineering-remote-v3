@@ -1,0 +1,2 @@
+import {selectReviewerFleet,type ReviewerModel} from './reviewer-broker.js';
+export function selectBlindReplacement(catalog:ReviewerModel[],role:string,excludedModelIds:string[]=[]){const eligible=catalog.filter(m=>!excludedModelIds.includes(m.id));const fleet=selectReviewerFleet(eligible,[role]);const model=fleet.models[0];return model?{model,assignment:fleet.assignments?.[0],reason:fleet.reason}:null}
