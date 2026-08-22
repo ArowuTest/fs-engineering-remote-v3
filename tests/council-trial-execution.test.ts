@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {runBoundedCouncilTrial} from '../src/council-trial-execution.js';
+test('bounded council execution module is importable without invoking providers',()=>{assert.equal(typeof runBoundedCouncilTrial,'function')});
