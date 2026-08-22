@@ -70,7 +70,7 @@ export function loadConfig(configPath?: string): AppConfig {
   const env = process.env;
   return validateConfig({
     ...raw,
-    host: env.HOST ?? env.FS_REMOTE_HOST ?? raw.host,
+    host: env.FS_REMOTE_HOST ?? (env.RAILWAY_ENVIRONMENT ? '0.0.0.0' : env.HOST) ?? raw.host,
     port: Number(env.PORT ?? env.FS_REMOTE_PORT ?? raw.port ?? 8765),
     endpointSecret: env.FS_REMOTE_ENDPOINT_SECRET ?? raw.endpointSecret,
     actionsSecret: env.FS_REMOTE_ACTIONS_SECRET ?? raw.actionsSecret,
