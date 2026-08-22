@@ -6,6 +6,7 @@ import { type AppConfig } from './config.js';
 import { createRemoteOperations } from './operations.js';
 import { ProcessManager } from './processes.js';
 import { createRemoteServer } from './server.js';
+import { databaseHealth } from './db.js';
 
 export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
@@ -25,11 +26,17 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
     }
   });
 
-  app.get('/healthz', async () => ({
-    ok: true,
-    service: 'fs-remote-mcp',
-    roots: config.roots.length,
-  }));
+  app.get('/healthz', async () => {
+    const database = await databaseHealth();
+    return {
+      ok: !database.configured || database.healthy,
+      service: 'fs-engineering-remote-v3',
+      version: '3.0.0-dev',
+      environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
+      roots: config.roots.length,
+      database,
+    };
+  });
   registerActionsRoutes(app, config, operations);
 
   app.all(`/mcp/${config.endpointSecret}`, async (request, reply) => {

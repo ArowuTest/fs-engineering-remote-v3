@@ -1,7 +1,9 @@
 import { buildHttpApp } from './http.js';
 import { loadConfig } from './config.js';
+import { migrateDatabase } from './db.js';
 
 const config = loadConfig();
+await migrateDatabase();
 const app = buildHttpApp(config);
 
 const stop = async (signal: string) => {

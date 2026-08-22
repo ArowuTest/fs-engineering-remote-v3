@@ -1,0 +1,20 @@
+import pg from 'pg';
+const {Pool}=pg;
+let pool:pg.Pool|undefined;
+export function databaseEnabled(){return Boolean(process.env.DATABASE_URL)}
+export function db(){if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL is not configured.');return pool??=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='require'?{rejectUnauthorized:false}:undefined});}
+export async function migrateDatabase(){if(!databaseEnabled())return {enabled:false};const p=db();await p.query(`
+CREATE TABLE IF NOT EXISTS fs_schema_migrations(version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS missions(id text PRIMARY KEY, instance_id text NOT NULL, alias text, goal text NOT NULL, root text NOT NULL, cwd text NOT NULL, status text NOT NULL, current_step_id text, max_remediation_attempts integer NOT NULL DEFAULT 3, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS missions_instance_alias_uq ON missions(instance_id,alias) WHERE alias IS NOT NULL;
+CREATE TABLE IF NOT EXISTS mission_steps(id text PRIMARY KEY, mission_id text NOT NULL REFERENCES missions(id) ON DELETE CASCADE, ordinal integer NOT NULL, title text NOT NULL, acceptance jsonb NOT NULL DEFAULT '[]'::jsonb, requires_approval boolean NOT NULL DEFAULT false, status text NOT NULL, attempts integer NOT NULL DEFAULT 0, started_at timestamptz, completed_at timestamptz, last_error text, metadata jsonb NOT NULL DEFAULT '{}'::jsonb);
+CREATE TABLE IF NOT EXISTS work_items(id text PRIMARY KEY, instance_id text NOT NULL, mission_id text NOT NULL, step_id text NOT NULL, kind text NOT NULL, status text NOT NULL, payload jsonb NOT NULL DEFAULT '{}'::jsonb, attempts integer NOT NULL DEFAULT 0, max_attempts integer NOT NULL DEFAULT 3, available_at timestamptz NOT NULL DEFAULT now(), lease_owner text, lease_expires_at timestamptz, error text, result jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS work_claim_idx ON work_items(instance_id,status,available_at,lease_expires_at);
+CREATE TABLE IF NOT EXISTS evidence(id text PRIMARY KEY, instance_id text NOT NULL, mission_id text NOT NULL, step_id text, kind text NOT NULL, source text NOT NULL, environment text, status text NOT NULL, summary text NOT NULL, payload jsonb, provenance jsonb NOT NULL DEFAULT '{}'::jsonb, observed_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS handoffs(id text PRIMARY KEY, instance_id text NOT NULL, mission_id text NOT NULL, alias text, body jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS handoffs_latest_idx ON handoffs(instance_id,mission_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS approvals(id text PRIMARY KEY, instance_id text NOT NULL, mission_id text NOT NULL, step_id text, kind text NOT NULL, status text NOT NULL, requested_at timestamptz NOT NULL DEFAULT now(), decided_at timestamptz, decided_by text, metadata jsonb NOT NULL DEFAULT '{}'::jsonb);
+CREATE TABLE IF NOT EXISTS council_runs(id text PRIMARY KEY, instance_id text NOT NULL, mission_id text NOT NULL, candidate_sha text, status text NOT NULL, packet_hash text, created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz, metadata jsonb NOT NULL DEFAULT '{}'::jsonb);
+CREATE TABLE IF NOT EXISTS audit_events(id bigserial PRIMARY KEY, instance_id text NOT NULL, actor text NOT NULL, action text NOT NULL, target_type text, target_id text, payload jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO fs_schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;`);return {enabled:true,version:1};}
+export async function databaseHealth(){if(!databaseEnabled())return {configured:false,healthy:false};try{const r=await db().query('select current_database() db, now() at');return {configured:true,healthy:true,database:r.rows[0].db,at:r.rows[0].at}}catch(error){return {configured:true,healthy:false,error:error instanceof Error?error.message:String(error)}}}
