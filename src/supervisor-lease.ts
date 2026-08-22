@@ -1,0 +1,7 @@
+import {db,databaseEnabled} from './db.js';
+const iid=()=>process.env.FS_REMOTE_INSTANCE_ID??'v3-default';
+export class SupervisorLeaseStore{
+ async acquire(missionId:string,owner:string,leaseMs=30000){if(!databaseEnabled())return true;const r=await db().query(`INSERT INTO mission_supervisor_leases(instance_id,mission_id,owner,lease_expires_at,updated_at) VALUES($1,$2,$3,now()+($4::text||' milliseconds')::interval,now()) ON CONFLICT(instance_id,mission_id) DO UPDATE SET owner=EXCLUDED.owner,lease_expires_at=EXCLUDED.lease_expires_at,updated_at=now() WHERE mission_supervisor_leases.lease_expires_at<now() OR mission_supervisor_leases.owner=$3 RETURNING owner`,[iid(),missionId,owner,leaseMs]);return (r.rowCount??0)>0}
+ async renew(missionId:string,owner:string,leaseMs=30000){if(!databaseEnabled())return true;const r=await db().query(`UPDATE mission_supervisor_leases SET lease_expires_at=now()+($4::text||' milliseconds')::interval,updated_at=now() WHERE instance_id=$1 AND mission_id=$2 AND owner=$3 RETURNING owner`,[iid(),missionId,owner,leaseMs]);return (r.rowCount??0)>0}
+ async release(missionId:string,owner:string){if(!databaseEnabled())return;await db().query('DELETE FROM mission_supervisor_leases WHERE instance_id=$1 AND mission_id=$2 AND owner=$3',[iid(),missionId,owner])}
+}

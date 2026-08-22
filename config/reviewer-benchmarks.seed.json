@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-08-22T16:45:00+01:00",
+  "policy": "Bootstrap-only benchmark evidence. Refresh from authoritative benchmark/model sources before relying on stale entries.",
+  "snapshots": [
+    {
+      "modelId": "poolside/laguna-s-2.1:free",
+      "provider": "openrouter",
+      "observedAt": "2026-08-22T16:45:00+01:00",
+      "source": "https://openrouter.ai/poolside/laguna-s-2.1",
+      "ratings": [
+        {"benchmark":"Terminal-Bench 2.1","dimension":"toolUse","score":0.702,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/poolside/laguna-s-2.1"},
+        {"benchmark":"DeepSWE","dimension":"coding","score":0.404,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/poolside/laguna-s-2.1"}
+      ]
+    },
+    {
+      "modelId": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "provider": "openrouter",
+      "observedAt": "2026-08-22T16:45:00+01:00",
+      "source": "https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b/providers",
+      "ratings": [
+        {"benchmark":"Artificial Analysis Coding Index","dimension":"coding","score":0.493,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b/providers"},
+        {"benchmark":"Artificial Analysis Agentic Index","dimension":"toolUse","score":0.274,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b/providers"},
+        {"benchmark":"GPQA Diamond","dimension":"reasoning","score":0.867,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b/providers"},
+        {"benchmark":"AA-LCR","dimension":"longContext","score":0.670,"observedAt":"2026-08-22T16:45:00+01:00","source":"https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b/providers"}
+      ]
+    }
+  ]
+}

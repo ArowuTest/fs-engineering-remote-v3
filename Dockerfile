@@ -14,5 +14,6 @@ RUN npm ci --omit=dev
 COPY --from=build /app/src ./src
 COPY agent ./agent
 COPY config/cloud.example.json ./config/cloud.example.json
+COPY config/reviewer-benchmarks.seed.json ./config/reviewer-benchmarks.seed.json
 RUN mkdir -p /app/.agent-runtime
 CMD ["npm","start"]

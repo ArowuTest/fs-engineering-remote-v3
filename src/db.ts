@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS node_jobs(id text PRIMARY KEY, instance_id text NOT N
 ALTER TABLE node_jobs ADD COLUMN IF NOT EXISTS idempotency_key text;
 CREATE UNIQUE INDEX IF NOT EXISTS node_jobs_idempotency_uq ON node_jobs(instance_id,idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS node_jobs_claim_idx ON node_jobs(instance_id,node_id,status,lease_expires_at,created_at);
+CREATE TABLE IF NOT EXISTS mission_supervisor_leases(instance_id text NOT NULL, mission_id text NOT NULL, owner text NOT NULL, lease_expires_at timestamptz NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(instance_id,mission_id));
+CREATE TABLE IF NOT EXISTS reviewer_catalog(model_id text PRIMARY KEY, provider text NOT NULL, free boolean NOT NULL DEFAULT false, healthy boolean NOT NULL DEFAULT true, observed_at timestamptz NOT NULL, source text NOT NULL, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, benchmarks jsonb NOT NULL DEFAULT '[]'::jsonb);
 CREATE TABLE IF NOT EXISTS audit_events(id bigserial PRIMARY KEY, instance_id text NOT NULL, actor text NOT NULL, action text NOT NULL, target_type text, target_id text, payload jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
 INSERT INTO fs_schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;`);return {enabled:true,version:1};}
 export async function databaseHealth(){if(!databaseEnabled())return {configured:false,healthy:false};try{const r=await db().query('select current_database() db, now() at');return {configured:true,healthy:true,database:r.rows[0].db,at:r.rows[0].at}}catch(error){return {configured:true,healthy:false,error:error instanceof Error?error.message:String(error)}}}
