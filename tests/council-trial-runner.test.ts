@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {councilTrialFleet} from '../src/council-trial-runner.js';
+test('trial runner maps specialists and reserves paid GLM for adjudication',async()=>{const f=await councilTrialFleet(['requirements','security','testing','architecture']);assert.deepEqual(f.models.slice(0,4),['stealth/ox-alpha','nvidia/nemotron-3-ultra-550b-a55b:free','poolside/laguna-s-2.1:free','z-ai/glm-5.3']);assert.equal(f.models.at(-1),'z-ai/glm-5.3');assert.equal(f.paidModelConsent,true)});
