@@ -1,0 +1,8 @@
+export interface ReasoningRequest{system:string;prompt:string;model?:string;temperature?:number;maxTokens?:number}
+export interface ReasoningResponse{provider:string;model:string;text:string;usage?:Record<string,unknown>;requestId?:string}
+export interface ReasoningProvider{complete(req:ReasoningRequest):Promise<ReasoningResponse>}
+export class OpenRouterProvider implements ReasoningProvider{
+ constructor(private readonly apiKey=process.env.OPENROUTER_API_KEY,private readonly defaultModel=process.env.FS_REMOTE_REASONING_MODEL??'openai/gpt-5.1'){}
+ async complete(req:ReasoningRequest){if(!this.apiKey)throw new Error('OPENROUTER_API_KEY is not configured for autonomous reasoning.');const model=req.model??this.defaultModel;const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${this.apiKey}`,'Content-Type':'application/json','X-Title':'FS Engineering Remote v3'},body:JSON.stringify({model,messages:[{role:'system',content:req.system},{role:'user',content:req.prompt}],temperature:req.temperature??0.1,max_tokens:req.maxTokens??4000})});const body:any=await r.json().catch(()=>({}));if(!r.ok)throw new Error(`OpenRouter ${r.status}: ${body?.error?.message??'request failed'}`);return {provider:'openrouter',model:body.model??model,text:String(body.choices?.[0]?.message?.content??''),usage:body.usage,requestId:r.headers.get('x-request-id')??undefined}}
+}
+export function reasoningProvider():ReasoningProvider{return new OpenRouterProvider()}
