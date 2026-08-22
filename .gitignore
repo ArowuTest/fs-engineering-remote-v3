@@ -9,3 +9,5 @@ runtime/
 .agent-runtime/
 
 .tmp-build/
+
+.node-secret
