@@ -3,7 +3,7 @@ import { runtimeIdentity } from './runtime.js';
 import { WorkerQueue } from './workers.js';
 import { MissionManager } from './missions.js';
 import { PersistentExecutor } from './executor.js';
-import { reasoningProvider } from './reasoning.js';
+import { modelGateway } from './model-gateway.js';
 import { ReviewCouncil } from './council.js';
 import { migrateDatabase } from './db.js';
 import { parseActionPlan, PlanDispatcher } from './plans.js';
@@ -44,10 +44,14 @@ executor.register('evidence', async item => ({
 
 executor.register('reasoning', async item => {
   const mission = await missions.get(item.missionId);
-  const out = await reasoningProvider().complete({
+  const out = await modelGateway().complete({
     system: String(item.payload.system ?? 'You are the autonomous reasoning worker for FS Engineering Remote v3. Produce a concrete next engineering decision grounded in the supplied mission and evidence.'),
     prompt: String(item.payload.prompt ?? JSON.stringify({ mission, evidence: await missions.evidence(mission.id) })),
     model: item.payload.model ? String(item.payload.model) : undefined,
+    configuredModelId: item.payload.model ? String(item.payload.model) : ((mission.metadata as any).reasoningModel ? String((mission.metadata as any).reasoningModel) : undefined),
+    paidModelConsent: Boolean((mission.metadata as any).paidModelConsent),
+    criticality: String(item.payload.criticality ?? 'outcome_critical') as 'mechanical'|'supporting'|'outcome_critical',
+    task: String(item.payload.task ?? 'autonomous engineering reasoning'),
   });
   try {
     const plan = parseActionPlan(out.text);

@@ -1,0 +1,12 @@
+import type {ReasoningProvider,ReasoningRequest,ReasoningResponse} from './reasoning.js';
+import {reasoningProvider} from './reasoning.js';
+import {ReviewerCatalogStore} from './reviewer-catalog.js';
+import {refreshReviewerCatalog} from './reviewer-source.js';
+import {reviewerCatalogNeedsRefresh} from './reviewer-broker.js';
+import {routeModel,type TaskCriticality} from './model-routing-policy.js';
+export interface GovernedReasoningRequest extends ReasoningRequest{criticality:TaskCriticality;task:string;configuredModelId?:string;paidModelConsent?:boolean}
+export class ModelGateway{
+ constructor(private readonly provider:ReasoningProvider=reasoningProvider(),private readonly catalog=new ReviewerCatalogStore()){}
+ async complete(req:GovernedReasoningRequest):Promise<ReasoningResponse&{routing:unknown}>{let models=await this.catalog.list();if(reviewerCatalogNeedsRefresh(models)){try{const fresh=await refreshReviewerCatalog();await this.catalog.upsert(fresh.models);models=await this.catalog.list()}catch(error){if(!models.length)throw new Error(`Model routing catalog unavailable: ${error instanceof Error?error.message:String(error)}`)}}const configured=req.configuredModelId??req.model,decision=routeModel(models,{criticality:req.criticality,configuredModelId:configured,paidModelConsent:req.paidModelConsent,task:req.task});if(decision.requiresConsent)throw new Error(`PAID_MODEL_CONSENT_REQUIRED: ${decision.reason}`);if(!decision.model)throw new Error(`MODEL_ROUTING_UNAVAILABLE: ${decision.reason}`);const model=`${decision.model.provider}::${decision.model.id}`;const out=await this.provider.complete({...req,model});return {...out,routing:{...decision,model:{id:decision.model.id,provider:decision.model.provider,free:decision.model.free},task:req.task,criticality:req.criticality}}}
+}
+export function modelGateway(){return new ModelGateway()}
