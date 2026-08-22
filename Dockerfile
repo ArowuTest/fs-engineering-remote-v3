@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci && npm install --no-save @typescript/typescript-linux-x64@7.0.2
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run check
