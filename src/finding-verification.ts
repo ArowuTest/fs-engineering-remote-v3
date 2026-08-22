@@ -1,0 +1,7 @@
+import crypto from 'node:crypto';
+export interface Finding{id:string;role:string;severity:'low'|'medium'|'high'|'critical';location?:string;claim:string;evidence?:string;status?:'open'|'confirmed'|'rejected'|'uncertain'}
+const norm=(s:string)=>s.toLowerCase().replace(/\W+/g,' ').trim();
+export function dedupeFindings(findings:Finding[]){const out:Finding[]=[];for(const f of findings){const duplicate=out.find(x=>(x.location&&f.location&&x.location===f.location&&norm(x.claim).split(' ').filter(w=>norm(f.claim).includes(w)).length>=2)||norm(x.claim)===norm(f.claim));if(!duplicate)out.push({...f,id:f.id||crypto.randomUUID()});else if(['critical','high','medium','low'].indexOf(f.severity)<['critical','high','medium','low'].indexOf(duplicate.severity))duplicate.severity=f.severity}return out}
+export function blockersNeedSkeptic(findings:Finding[]){return dedupeFindings(findings).filter(f=>['high','critical'].includes(f.severity)).map(f=>({...f,status:'open' as const}))}
+export function resolveSkeptic(f:Finding,verdict:'confirmed'|'rejected'|'uncertain'){return {...f,status:verdict};}
+export function reviewCanPass(findings:Finding[],failedDimensions:string[]=[]){if(failedDimensions.length)return false;return !findings.some(f=>['high','critical'].includes(f.severity)&&(f.status!=='rejected'));}
