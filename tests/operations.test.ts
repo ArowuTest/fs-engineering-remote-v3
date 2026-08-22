@@ -50,8 +50,8 @@ test('shared operations permit normal engineering delivery commands', async () =
 test('shared operations advertise command, process, Git and skill capabilities explicitly', async () => {
   const { ops } = await fixture();
   const capabilities = await ops.capabilities();
-  assert.equal(capabilities.service, 'fs-remote-mcp');
-  assert.equal(capabilities.version, '2.0.0-dev');
+  assert.equal(capabilities.service, 'fs-engineering-remote-v3');
+  assert.equal(capabilities.version, '3.0.0-dev');
   assert.equal(capabilities.execution.shell, 'PowerShell');
   assert.ok(capabilities.tools.commands.includes('run_command'));
   assert.ok(capabilities.tools.processes.includes('start_process'));

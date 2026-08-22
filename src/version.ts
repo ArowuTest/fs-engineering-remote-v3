@@ -1,2 +1,2 @@
-export const SERVICE_NAME = 'fs-remote-mcp';
-export const SERVICE_VERSION = '2.0.0-dev';
+export const SERVICE_NAME = 'fs-engineering-remote-v3';
+export const SERVICE_VERSION = '3.0.0-dev';

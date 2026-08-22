@@ -53,9 +53,9 @@ test('diagnostics distinguish healthy transport from API/authentication failure'
 
 test('diagnostics report the healthy full runtime chain', async () => {
   const result = await new RuntimeDiagnostics(config, probe({})).diagnose();
-  assert.equal(result.agent, 'FS Engineering Remote v2');
-  assert.equal(result.version, '2.0.0-dev');
-  assert.equal(result.environment, 'validation / development');
+  assert.equal(result.agent, 'FS Engineering Remote v3');
+  assert.equal(result.version, '3.0.0-dev');
+  assert.equal(result.environment, 'development');
   assert.equal(result.endpoint, 'https://fs.fs-mcp.com');
   assert.equal(result.server, 'healthy');
   assert.equal(result.server_process, 'running');

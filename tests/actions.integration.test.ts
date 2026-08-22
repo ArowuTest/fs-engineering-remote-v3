@@ -243,7 +243,7 @@ test('OpenAPI advertises engineering-agent discovery operations', async () => {
   assert.equal(response.statusCode, 200);
   const body = response.body;
   const document = response.json() as Record<string, any>;
-  assert.equal(document.info?.version, '2.0.0-dev');
+  assert.equal(document.info?.version, '3.0.0-dev');
   assert.ok(document.components?.schemas?.CapabilitiesResult?.properties?.version);
   assert.ok(document.components?.schemas?.CapabilitiesResult?.required?.includes('version'));
   for (const operationId of ['filesystemOperation', 'processOperation', 'gitOperation', 'skillOperation', 'memoryOperation', 'engineeringOperation', 'browserOperation']) {

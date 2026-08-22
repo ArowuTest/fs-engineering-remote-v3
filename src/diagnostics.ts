@@ -1,4 +1,4 @@
-﻿import { execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { AppConfig } from './config.js';
 import { SERVICE_VERSION } from './version.js';
@@ -55,9 +55,9 @@ export class RuntimeDiagnostics {
     const serverHealthy = await this.probe.localHealth();
     if (!serverHealthy) {
       return {
-        agent: 'FS Engineering Remote v2',
+        agent: 'FS Engineering Remote v3',
         version: SERVICE_VERSION,
-        environment: 'validation / development',
+        environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
         endpoint: this.config.diagnosticsExternalBaseUrl,
         server: 'down' as const,
         server_process: 'unknown' as const,
@@ -72,12 +72,13 @@ export class RuntimeDiagnostics {
       };
     }
 
-    const cloudflared = await this.probe.cloudflaredRunning();
+    const hosted = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === 'true');
+    const cloudflared = hosted ? true : await this.probe.cloudflaredRunning();
     if (!cloudflared) {
       return {
-        agent: 'FS Engineering Remote v2',
+        agent: 'FS Engineering Remote v3',
         version: SERVICE_VERSION,
-        environment: 'validation / development',
+        environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
         endpoint: this.config.diagnosticsExternalBaseUrl,
         server: 'healthy' as const,
         server_process: 'running' as const,
@@ -95,9 +96,9 @@ export class RuntimeDiagnostics {
     const externalHealthy = await this.probe.externalHealth();
     if (!externalHealthy) {
       return {
-        agent: 'FS Engineering Remote v2',
+        agent: 'FS Engineering Remote v3',
         version: SERVICE_VERSION,
-        environment: 'validation / development',
+        environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
         endpoint: this.config.diagnosticsExternalBaseUrl,
         server: 'healthy' as const,
         server_process: 'running' as const,
@@ -118,9 +119,9 @@ export class RuntimeDiagnostics {
     ]);
     const apiHealthy = openapi && actionsAuth;
     return {
-      agent: 'FS Engineering Remote v2',
+      agent: 'FS Engineering Remote v3',
       version: SERVICE_VERSION,
-      environment: 'validation / development',
+      environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
       endpoint: this.config.diagnosticsExternalBaseUrl,
       server: 'healthy' as const,
       server_process: 'running' as const,
