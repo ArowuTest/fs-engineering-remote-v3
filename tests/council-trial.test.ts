@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {loadCouncilTrial,trialAssignment,trialAllowsPaid} from '../src/council-trial.js';
+test('bounded council trial has specialist roles and nonpersistent paid consent',async()=>{const c=await loadCouncilTrial();assert.equal(c.models.length,4);assert.equal(trialAssignment(c,'security')?.id,'nvidia/nemotron-3-ultra-550b-a55b:free');assert.equal(trialAssignment(c,'testing')?.id,'poolside/laguna-s-2.1:free');assert.equal(trialAllowsPaid(c,'z-ai/glm-5.3'),true);assert.equal(c.paidConsent.persistent,false)});

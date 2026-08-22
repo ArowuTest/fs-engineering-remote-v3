@@ -1,0 +1,11 @@
+{
+  "name":"bounded-council-trial-2026-08-22",
+  "paidConsent":{"models":["z-ai/glm-5.3"],"scope":"this council trial only","persistent":false},
+  "models":[
+    {"id":"z-ai/glm-5.3","provider":"openrouter","costClass":"paid","roles":["architecture","adjudication"]},
+    {"id":"stealth/ox-alpha","provider":"openrouter","costClass":"free","roles":["requirements","correctness"]},
+    {"id":"nvidia/nemotron-3-ultra-550b-a55b:free","provider":"openrouter","costClass":"free","roles":["security","hardening"]},
+    {"id":"poolside/laguna-s-2.1:free","provider":"openrouter","costClass":"free","roles":["testing","operations_reliability"]}
+  ],
+  "policy":"Trial configuration only. Do not promote to default reviewer routing without measured council evidence. Paid consent expires with this trial."
+}
