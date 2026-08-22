@@ -14,6 +14,7 @@ import { ContinuousEngineeringSupervisor } from './continuous-supervisor.js';
 import { ReviewerCatalogStore } from './reviewer-catalog.js';
 import { selectReviewerFleet, reviewerCatalogNeedsRefresh } from './reviewer-broker.js';
 import { refreshReviewerCatalog } from './reviewer-source.js';
+import { buildCouncilContext } from './council-context.js';
 
 await migrateDatabase();
 
@@ -131,13 +132,18 @@ executor.register('review_council', async item => {
     }
   }
 
+  const step = mission.steps.find(s => s.id === item.stepId) ?? mission.steps.find(s => s.id === mission.currentStepId) ?? mission.steps[0];
+  if (!step) throw new Error('Review council requires a mission step.');
+  const councilContext = buildCouncilContext(mission, step, String(item.payload.candidate ?? ''), evidence);
   const result = await new ReviewCouncil().run({
     missionId: mission.id,
     goal: mission.goal,
     candidate: String(item.payload.candidate ?? ''),
     evidence,
+    context: councilContext,
     roles,
     models,
+    paidModelConsent: Boolean((mission.metadata as any).paidModelConsent),
   });
   const verdict = String(result.adjudication?.verdict ?? 'changes');
   return {
