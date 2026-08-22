@@ -15,6 +15,7 @@ import { ReviewerCatalogStore } from './reviewer-catalog.js';
 import { selectReviewerFleet, reviewerCatalogNeedsRefresh } from './reviewer-broker.js';
 import { refreshReviewerCatalog } from './reviewer-source.js';
 import { buildCouncilContext } from './council-context.js';
+import { VerificationDispatcher } from './verification-dispatch.js';
 
 await migrateDatabase();
 
@@ -88,10 +89,10 @@ executor.register('verification_repeat', async item => {
   if (!prior) return { result: { verified: false }, evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'No deterministic verification evidence was available to repeat.', data: { gate: item.payload.gate, run: item.payload.run } }] };
   const recipe = recipeFromEvidence(prior);
   if (!recipe) return { result: { verified: false, priorEvidenceId: prior.id }, evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'Prior evidence did not contain an executable verification recipe; pass^k cannot be claimed.', data: { priorEvidenceId: prior.id, gate: item.payload.gate, run: item.payload.run } }] };
-  return {
-    result: { verified: false, recipe, requiresNodeExecution: true },
-    evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'Executable verification recipe requires governed node dispatch; cloud worker will not bypass the node security boundary.', data: { recipe, gate: item.payload.gate, run: item.payload.run } }],
-  };
+  const md:any=mission.metadata??{},nodeId=String(md.executionNodeId??''),project=String(md.executionProject??mission.cwd??'');
+  if (!nodeId) return { result: { verified: false, recipe, requiresNodeExecution: true }, evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'Executable verification recipe is ready but no governed execution node is assigned to this mission.', data: { recipe, gate: item.payload.gate, run: item.payload.run } }] };
+  const job=await new VerificationDispatcher().dispatch({missionId:mission.id,stepId:item.stepId,nodeId,project,recipe,run:Number(item.payload.run??1),gate:item.payload.gate});
+  return { result: { verified: false, recipe, nodeJob: job, awaitingNodeExecution: true }, evidence: [{ kind: 'reliability_verification_dispatch', source: 'persistent-executor', status: 'unknown', summary: 'Independent verification recipe dispatched to governed execution node.', data: { recipe, gate: item.payload.gate, run: item.payload.run, nodeJob: job } }] };
 });
 
 executor.register('review_council', async item => {
