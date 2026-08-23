@@ -1,0 +1,1 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';test('admin portal surfaces audit and session revocation',async()=>{const s=await fs.readFile(new URL('../src/portal.ts',import.meta.url),'utf8');assert.match(s,/Recent audit activity/);assert.match(s,/revokeSessions/);assert.match(s,/\/api\/admin\/audit\?limit=30/)})
