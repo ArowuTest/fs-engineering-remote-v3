@@ -1,0 +1,1 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';test('admin can audit and revoke workspace sessions',async()=>{const s=await fs.readFile(new URL('../src/auth-http.ts',import.meta.url),'utf8');assert.match(s,/\/api\/admin\/audit/);assert.match(s,/revoke-sessions/);assert.match(s,/workspace_id=\$1 AND user_id=\$2/)})

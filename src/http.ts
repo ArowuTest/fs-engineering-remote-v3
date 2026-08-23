@@ -11,6 +11,7 @@ import { registerNodeRoutes } from './node-http.js';
 import { HostedEngineering } from './hosted-engineering.js';
 import { registerAuthRoutes } from './auth-http.js';
 import { registerPortal } from './portal.js';
+import { registerUserPlatformRoutes } from './user-platform-http.js';
 
 export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
@@ -45,6 +46,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   registerNodeRoutes(app, config);
   registerAuthRoutes(app);
   registerPortal(app);
+  registerUserPlatformRoutes(app);
   const hosted = new HostedEngineering(process.env.FS_HOSTED_WORK_ROOT ?? 'runtime/hosted-work');
   const hostedAuth = async (request: any, reply: any) => {
     const secret = process.env.FS_HOSTED_ENGINEERING_SECRET ?? '';
