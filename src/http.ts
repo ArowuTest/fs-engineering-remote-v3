@@ -26,6 +26,8 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   });
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
 
+  app.addHook('onSend', async (_request, reply, payload) => { reply.header('x-content-type-options','nosniff'); reply.header('referrer-policy','no-referrer'); reply.header('x-frame-options','DENY'); return payload; });
+
   app.addHook('onRequest', async (request, reply) => {
     if (request.headers.origin && !request.url.startsWith('/portal') && !request.url.startsWith('/api/')) {
       await reply.code(403).send({ error: 'Browser-origin requests are not accepted.' });
