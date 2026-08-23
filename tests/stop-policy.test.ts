@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {classifyStop} from '../src/stop-policy.js';
+test('ordinary engineering failure remains recoverable',()=>{assert.equal(classifyStop('failed',{}),'recoverable');assert.equal(classifyStop('blocked_churn',{}),'recoverable');assert.equal(classifyStop('blocked',{metadata:{}}),'recoverable')});
+test('user, requirements and access boundaries remain interaction stops',()=>{assert.equal(classifyStop('blocked',{metadata:{userInterrupted:true}}),'interaction');assert.equal(classifyStop('blocked',{metadata:{accessBlocker:{kind:'credential'}}}),'interaction');assert.equal(classifyStop('requirements_challenge',{}),'interaction');assert.equal(classifyStop('awaiting_approval',{}),'interaction')});

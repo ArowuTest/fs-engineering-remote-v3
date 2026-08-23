@@ -1,0 +1,2 @@
+export type StopClass='terminal'|'interaction'|'recoverable'|'continue';
+export function classifyStop(state:string,mission?:any):StopClass{if(['completed','cancelled'].includes(state))return 'terminal';if(['awaiting_approval','requirements_challenge'].includes(state))return 'interaction';if(state==='blocked'){const md=mission?.metadata??{};return md.userInterrupted||md.requirementChallenge||md.accessBlocker?'interaction':'recoverable'}if(['failed','blocked_churn','remediation_needs_fresh_evidence'].includes(state))return 'recoverable';return 'continue'}
