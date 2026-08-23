@@ -36,7 +36,7 @@ const reviewerCatalog = new ReviewerCatalogStore();
 
 executor.register('hosted_git', async item => {
   const result = await new HostedGitExecutor().execute(item.payload as any);
-  return { result: result as unknown as Record<string,unknown>, evidence: [{ kind: 'hosted_git', source: 'railway-worker', status: 'pass', summary: `Hosted Git branch  committed and pushed at .`, data: { repository: result.repository, branch: result.branch, commit: result.commit, changed: result.changed, verification: result.verification.map(v=>({command:v.command,ok:v.ok})) } }] };
+  return { result: result as unknown as Record<string,unknown>, evidence: [{ kind: 'hosted_git', source: 'railway-worker', status: 'pass', summary: `Hosted Git branch ${result.branch} committed and pushed at ${result.commit}.`, data: { repository: result.repository, branch: result.branch, commit: result.commit, changed: result.changed, verification: result.verification.map(v=>({command:v.command,ok:v.ok})) } }] };
 });
 
 executor.register('evidence', async item => ({
@@ -206,4 +206,3 @@ const stop = async () => {
 process.on('SIGINT', () => void stop());
 process.on('SIGTERM', () => void stop());
 await new Promise(() => {});
-
