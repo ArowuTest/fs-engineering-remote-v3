@@ -1,9 +1,11 @@
 import { buildHttpApp } from './http.js';
 import { loadConfig } from './config.js';
 import { migrateDatabase } from './db.js';
+import { migrateMultiUserSchema } from './multi-user-schema.js';
 
 const config = loadConfig();
 await migrateDatabase();
+await migrateMultiUserSchema();
 const app = buildHttpApp(config);
 
 const stop = async (signal: string) => {

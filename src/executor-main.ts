@@ -17,8 +17,10 @@ import { refreshReviewerCatalog } from './reviewer-source.js';
 import { buildCouncilContext } from './council-context.js';
 import { VerificationDispatcher } from './verification-dispatch.js';
 import { HostedGitExecutor } from './hosted-git-executor.js';
+import { migrateMultiUserSchema } from './multi-user-schema.js';
 
 await migrateDatabase();
+await migrateMultiUserSchema();
 
 const identity = runtimeIdentity();
 const queue = new WorkerQueue(path.join(identity.stateRoot, 'work-queue'));
