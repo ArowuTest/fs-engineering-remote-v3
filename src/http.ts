@@ -9,6 +9,8 @@ import { createRemoteServer } from './server.js';
 import { databaseHealth } from './db.js';
 import { registerNodeRoutes } from './node-http.js';
 import { HostedEngineering } from './hosted-engineering.js';
+import { registerAuthRoutes } from './auth-http.js';
+import { registerPortal } from './portal.js';
 
 export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
@@ -23,7 +25,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
 
   app.addHook('onRequest', async (request, reply) => {
-    if (request.headers.origin) {
+    if (request.headers.origin && !request.url.startsWith('/portal') && !request.url.startsWith('/api/')) {
       await reply.code(403).send({ error: 'Browser-origin requests are not accepted.' });
     }
   });
@@ -41,6 +43,8 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   });
   registerActionsRoutes(app, config, operations);
   registerNodeRoutes(app, config);
+  registerAuthRoutes(app);
+  registerPortal(app);
   const hosted = new HostedEngineering(process.env.FS_HOSTED_WORK_ROOT ?? 'runtime/hosted-work');
   const hostedAuth = async (request: any, reply: any) => {
     const secret = process.env.FS_HOSTED_ENGINEERING_SECRET ?? '';
