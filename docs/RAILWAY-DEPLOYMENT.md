@@ -5,6 +5,8 @@ The control plane is designed to run continuously on Railway; local execution no
 ## Required variables
 
 - `DATABASE_URL` - Railway PostgreSQL connection string.
+- `FS_REMOTE_ENDPOINT_SECRET` - 32+ character private MCP endpoint capability.
+- `FS_REMOTE_ACTIONS_SECRET` - separate 32+ character legacy Actions secret; must differ from the endpoint secret.
 - `FS_PUBLIC_BASE_URL` - public HTTPS URL of this service.
 - `FS_HOSTED_ENGINEERING_SECRET` - random secret for hosted worker submission.
 - `FS_PROVIDER_SECRET_KEY` - 32-byte/base64 encryption key for per-user provider credentials.
