@@ -114,134 +114,135 @@ export function registerActionsRoutes(
     if(!oauth)return reply.code(401).send({error:'Unauthorized.'});
     (request as any).fsAuth={mode:'oauth',workspaceId:oauth.workspace_id,userId:oauth.user_id,role:oauth.role,scopes:oauth.scopes??[]};
   };
+  const requireLegacyAuth = async (request: FastifyRequest, reply: FastifyReply) => { if (!isAuthorized(request.headers.authorization, config.actionsSecret)) return reply.code(401).send({ error: 'Legacy Actions authentication required.' }); (request as any).fsAuth={mode:'legacy',scopes:['*']}; };
   const scopedOps=(request:FastifyRequest)=>{const workspaceId=(request as any).fsAuth?.workspaceId;return workspaceId&&processes?createRemoteOperations(config,processes,workspaceId):ops};
   const scope=(request:FastifyRequest,required:'fs.read'|'fs.write'|'fs.node')=>{const a=(request as any).fsAuth;if(a?.mode==='legacy'||a?.scopes?.includes(required))return;throw new Error(`OAuth scope '${required}' is required.`)};
 
   app.get('/openapi.json', async (request) => createOpenApiDocument(publicBaseUrl(request)));
 
-  app.get('/actions/health', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/health', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, () => ops.health()));
-  app.get('/actions/roots', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/roots', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, () => ops.listRoots()));
-  app.get('/actions/capabilities', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/capabilities', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, () => ops.capabilities()));
-  app.get('/actions/diagnose-runtime', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/diagnose-runtime', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, () => ops.diagnoseRuntime()));
-  app.get('/actions/agent-bootstrap', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/agent-bootstrap', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, () => ops.agentBootstrap()));
-  app.post('/actions/list-skills', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/list-skills', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = listSkillsBody.parse(request.body);
       return await ops.listSkills(body.query, body.source, body.limit);
     }));
-  app.post('/actions/read-skill', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/read-skill', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = readSkillBody.parse(request.body);
       return await ops.readSkill(body.id);
     }));
-  app.post('/actions/list-skill-resources', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/list-skill-resources', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = listSkillResourcesBody.parse(request.body);
       return await ops.listSkillResources(body.id);
     }));
-  app.post('/actions/read-skill-resource', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/read-skill-resource', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = readSkillResourceBody.parse(request.body);
       return await ops.readSkillResource(body.id, body.path);
     }));
-  app.post('/actions/list-directory', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/list-directory', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = listDirectoryBody.parse(request.body);
       return await ops.listDirectory(body.root, body.path);
     }));
-  app.post('/actions/read-file', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/read-file', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = readFileBody.parse(request.body);
       return await ops.readFile(body.root, body.path, body.offset, body.length);
     }));
-  app.post('/actions/write-file', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/write-file', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = writeFileBody.parse(request.body);
       return await ops.writeFile(body.root, body.path, body.content, body.mode);
     }));
-  app.post('/actions/edit-file', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/edit-file', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = editFileBody.parse(request.body);
       return await ops.editFile(body.root, body.path, body.oldText, body.newText, body.replaceAll);
     }));
-  app.post('/actions/run-command', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/run-command', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = runCommandBody.parse(request.body);
       return await ops.runCommand(body.root, body.cwd, body.command, body.timeoutMs);
     }));
-  app.post('/actions/start-process', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/start-process', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = startProcessBody.parse(request.body);
       return await ops.startProcess(body.root, body.cwd, body.command);
     }));
-  app.post('/actions/read-process-output', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/read-process-output', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = processReadBody.parse(request.body);
       return await ops.readProcessOutput(body.processId, body.cursor);
     }));
-  app.post('/actions/stop-process', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/stop-process', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = processStopBody.parse(request.body);
       return await ops.stopProcess(body.processId);
     }));
-  app.post('/actions/git-status', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/git-status', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = gitStatusBody.parse(request.body);
       return await ops.gitStatus(body.root, body.cwd);
     }));
-  app.post('/actions/git-diff', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/git-diff', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = gitDiffBody.parse(request.body);
       return await ops.gitDiff(body.root, body.cwd, body.staged);
     }));
-  app.post('/actions/git-stage', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/git-stage', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = gitStageBody.parse(request.body);
       return await ops.gitStage(body.root, body.cwd, body.paths, body.all);
     }));
-  app.post('/actions/git-commit', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/git-commit', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = gitCommitBody.parse(request.body);
       return await ops.gitCommit(body.root, body.cwd, body.message);
     }));
-  app.post('/actions/git-push', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/git-push', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => {
       const body = gitPushBody.parse(request.body);
       return await ops.gitPush(body.root, body.cwd, body.remote, body.branch, body.setUpstream, body.forceWithLease);
     }));
-  app.post('/actions/inspect-repository', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/inspect-repository', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = inspectRepositoryBody.parse(request.body); return await ops.inspectRepository(body.root, body.cwd); }));
-  app.post('/actions/read-agent-memory', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/read-agent-memory', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = memoryReadBody.parse(request.body); return await ops.readAgentMemory(body.root, body.cwd, body.name); }));
-  app.post('/actions/write-agent-memory', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/write-agent-memory', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = memoryWriteBody.parse(request.body); return await ops.writeAgentMemory(body.root, body.cwd, body.name, body.content); }));
-  app.post('/actions/append-agent-event', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/append-agent-event', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = eventBody.parse(request.body); return await ops.appendAgentEvent(body.root, body.cwd, body.event); }));
-  app.post('/actions/save-checkpoint', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/save-checkpoint', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = checkpointBody.parse(request.body); return await ops.saveCheckpoint(body.root, body.cwd, body.checkpoint); }));
-  app.post('/actions/load-checkpoint', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/load-checkpoint', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = checkpointLoadBody.parse(request.body); return await ops.loadCheckpoint(body.root, body.cwd); }));
-  app.get('/actions/environment-capabilities', { preHandler: requireAuth }, async (_request, reply) =>
+  app.get('/actions/environment-capabilities', { preHandler: requireLegacyAuth }, async (_request, reply) =>
     respond(reply, async () => await ops.environmentCapabilities()));
-  app.post('/actions/project-readiness', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/project-readiness', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = repositoryReadBody.parse(request.body); return await ops.projectReadiness(body.root, body.cwd); }));
-  app.post('/actions/engineering-evidence', { preHandler: requireAuth }, async (request, reply) =>
+  app.post('/actions/engineering-evidence', { preHandler: requireLegacyAuth }, async (request, reply) =>
     respond(reply, async () => { const body = repositoryReadBody.parse(request.body); return await ops.engineeringEvidence(body.root, body.cwd); }));
-  app.post('/actions/browser-start', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserStartBody.parse(request.body);return await ops.browserStart(b.headless,b.executablePath);}));
-  app.post('/actions/browser-navigate', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserNavigateBody.parse(request.body);return await ops.browserNavigate(b.sessionId,b.url,b.waitUntil);}));
-  app.post('/actions/browser-snapshot', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserSnapshot(b.sessionId);}));
-  app.post('/actions/browser-click', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSelectorBody.parse(request.body);return await ops.browserClick(b.sessionId,b.selector);}));
-  app.post('/actions/browser-type', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserTypeBody.parse(request.body);return await ops.browserType(b.sessionId,b.selector,b.value,b.pressEnter);}));
-  app.post('/actions/browser-wait', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserWaitBody.parse(request.body);return await ops.browserWait(b.sessionId,b.selector,b.timeoutMs);}));
-  app.post('/actions/browser-console', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserCursorBody.parse(request.body);return await ops.browserConsole(b.sessionId,b.cursor);}));
-  app.post('/actions/browser-network', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserCursorBody.parse(request.body);return await ops.browserNetwork(b.sessionId,b.cursor);}));
-  app.post('/actions/browser-screenshot', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserScreenshot(b.sessionId);}));
-  app.post('/actions/browser-close', { preHandler: requireAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserClose(b.sessionId);}));
+  app.post('/actions/browser-start', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserStartBody.parse(request.body);return await ops.browserStart(b.headless,b.executablePath);}));
+  app.post('/actions/browser-navigate', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserNavigateBody.parse(request.body);return await ops.browserNavigate(b.sessionId,b.url,b.waitUntil);}));
+  app.post('/actions/browser-snapshot', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserSnapshot(b.sessionId);}));
+  app.post('/actions/browser-click', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSelectorBody.parse(request.body);return await ops.browserClick(b.sessionId,b.selector);}));
+  app.post('/actions/browser-type', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserTypeBody.parse(request.body);return await ops.browserType(b.sessionId,b.selector,b.value,b.pressEnter);}));
+  app.post('/actions/browser-wait', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserWaitBody.parse(request.body);return await ops.browserWait(b.sessionId,b.selector,b.timeoutMs);}));
+  app.post('/actions/browser-console', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserCursorBody.parse(request.body);return await ops.browserConsole(b.sessionId,b.cursor);}));
+  app.post('/actions/browser-network', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserCursorBody.parse(request.body);return await ops.browserNetwork(b.sessionId,b.cursor);}));
+  app.post('/actions/browser-screenshot', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserScreenshot(b.sessionId);}));
+  app.post('/actions/browser-close', { preHandler: requireLegacyAuth }, async (request, reply) => respond(reply, async()=>{const b=browserSessionBody.parse(request.body);return await ops.browserClose(b.sessionId);}));
 
   // Compact GPT Actions surface. Granular routes above remain available for compatibility and MCP stays granular.
   app.post('/actions/fs', { preHandler: requireAuth }, async (request, reply) => respond(reply, async () => {
