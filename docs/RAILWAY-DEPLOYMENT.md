@@ -26,4 +26,4 @@ Import `/openapi.json` as the GPT Action schema. Configure OAuth authorization U
 
 ## Execution nodes
 
-A user can enroll Windows, macOS, or Linux from `/portal/settings`. Enrollment tokens expire after 15 minutes and are single-use. Node credentials bind subsequent heartbeat/claim/complete calls to the enrolled workspace.
+A user can enroll Windows, macOS, or Linux from `/portal/settings`. Enrollment tokens expire after 15 minutes and are single-use. Start the node once with `FS_REMOTE_CONTROL_PLANE_URL=https://<your-service> FS_REMOTE_NODE_ENROLLMENT_TOKEN=<token> npm run node:agent`; the enrollment exchange returns the long-lived node credential. Persist that returned credential as `FS_REMOTE_NODE_SECRET` in the machine's secret store/environment before subsequent restarts. Node credentials bind heartbeat/claim/complete calls to the enrolled workspace.
