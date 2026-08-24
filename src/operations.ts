@@ -30,19 +30,24 @@ export class RemoteOperations {
   private readonly browser = new BrowserManager();
   private readonly database = new DatabaseManager();
   private readonly runtime = runtimeIdentity();
-  private readonly missions = new MissionManager(path.join(this.runtime.stateRoot,'missions'));
-  private readonly workers = new WorkerQueue(path.join(this.runtime.stateRoot,'work-queue'));
-  private readonly handoffs = new HandoffStore(path.join(this.runtime.stateRoot,'missions'));
+  private readonly missions: MissionManager;
+  private readonly workers: WorkerQueue;
+  private readonly handoffs: HandoffStore;
   private readonly github = new GitHubProvider();
-  private readonly orchestrator = new MissionOrchestrator(this.missions,this.workers);
+  private readonly orchestrator: MissionOrchestrator;
 
   constructor(
     private readonly config: AppConfig,
     private readonly processes: ProcessManager,
     skills?: SkillCatalog,
     private readonly diagnostics = new RuntimeDiagnostics(config),
+    private readonly workspaceId?: string,
   ) {
     this.skills = skills ?? new SkillCatalog(defaultSkillsRoot());
+    this.missions = new MissionManager(path.join(this.runtime.stateRoot,'missions'), workspaceId);
+    this.workers = new WorkerQueue(path.join(this.runtime.stateRoot,'work-queue'),120000,workspaceId);
+    this.handoffs = new HandoffStore(path.join(this.runtime.stateRoot,'missions'));
+    this.orchestrator = new MissionOrchestrator(this.missions,this.workers);
   }
 
   private getRoot(name: string): RootConfig {
@@ -497,6 +502,6 @@ export class RemoteOperations {
   }
 }
 
-export function createRemoteOperations(config: AppConfig, processes: ProcessManager) {
-  return new RemoteOperations(config, processes);
+export function createRemoteOperations(config: AppConfig, processes: ProcessManager, workspaceId?: string) {
+  return new RemoteOperations(config, processes, undefined, undefined, workspaceId);
 }

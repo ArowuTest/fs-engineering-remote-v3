@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {assertWorkspaceAccess,requireMutationRole,requireWorkspaceId} from '../src/tenant-context.js';
+test('workspace identifiers are validated',()=>{assert.equal(requireWorkspaceId('workspace-abc_1'),'workspace-abc_1');assert.throws(()=>requireWorkspaceId('../other'),/valid workspaceId/)});
+test('cross-workspace access is denied',()=>{assert.doesNotThrow(()=>assertWorkspaceAccess('workspace-a','workspace-a'));assert.throws(()=>assertWorkspaceAccess('workspace-a','workspace-b'),/Cross-workspace/);assert.throws(()=>assertWorkspaceAccess('workspace-a',undefined),/Cross-workspace/)});
+test('viewer and reviewer cannot mutate workspace state',()=>{assert.doesNotThrow(()=>requireMutationRole('owner'));assert.doesNotThrow(()=>requireMutationRole('engineer'));assert.throws(()=>requireMutationRole('viewer'),/does not permit/);assert.throws(()=>requireMutationRole('reviewer'),/does not permit/)});

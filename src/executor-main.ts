@@ -16,8 +16,11 @@ import { selectReviewerFleet, reviewerCatalogNeedsRefresh } from './reviewer-bro
 import { refreshReviewerCatalog } from './reviewer-source.js';
 import { buildCouncilContext } from './council-context.js';
 import { VerificationDispatcher } from './verification-dispatch.js';
+import { HostedGitExecutor } from './hosted-git-executor.js';
+import { migrateMultiUserSchema } from './multi-user-schema.js';
 
 await migrateDatabase();
+await migrateMultiUserSchema();
 
 const identity = runtimeIdentity();
 const queue = new WorkerQueue(path.join(identity.stateRoot, 'work-queue'));
@@ -32,6 +35,11 @@ const executor = new PersistentExecutor(
 const orchestrator = new MissionOrchestrator(missions, queue);
 const supervisor = new ContinuousEngineeringSupervisor(missions, orchestrator, Number(process.env.FS_REMOTE_SUPERVISOR_POLL_MS ?? 1500));
 const reviewerCatalog = new ReviewerCatalogStore();
+
+executor.register('hosted_git', async item => {
+  const result = await new HostedGitExecutor().execute(item.payload as any);
+  return { result: result as unknown as Record<string,unknown>, evidence: [{ kind: 'hosted_git', source: 'railway-worker', status: 'pass', summary: `Hosted Git branch ${result.branch} committed and pushed at ${result.commit}.`, data: { repository: result.repository, branch: result.branch, commit: result.commit, changed: result.changed, verification: result.verification.map(v=>({command:v.command,ok:v.ok})) } }] };
+});
 
 executor.register('evidence', async item => ({
   result: { recorded: true },
