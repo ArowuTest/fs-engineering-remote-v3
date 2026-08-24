@@ -45,7 +45,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
       database,
     };
   });
-  registerActionsRoutes(app, config, operations);
+  registerActionsRoutes(app, config, operations, processes);
   registerNodeRoutes(app, config);
   registerAuthRoutes(app);
   registerPortal(app);
