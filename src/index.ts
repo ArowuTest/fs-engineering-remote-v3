@@ -2,10 +2,12 @@ import { buildHttpApp } from './http.js';
 import { loadConfig } from './config.js';
 import { migrateDatabase } from './db.js';
 import { migrateMultiUserSchema } from './multi-user-schema.js';
+import { bootstrapInitialOwner } from './bootstrap-owner.js';
 
 const config = loadConfig();
 await migrateDatabase();
 await migrateMultiUserSchema();
+await bootstrapInitialOwner();
 const app = buildHttpApp(config);
 
 const stop = async (signal: string) => {
