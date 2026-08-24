@@ -43,7 +43,7 @@ function postAction(
     post: {
       operationId,
       summary,
-      security: [{ bearerAuth: [] }],
+      security: [{ oauth2: [] }, { bearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
@@ -67,7 +67,7 @@ function getAction(operationId: string, summary: string, successSchema: JsonSche
     get: {
       operationId,
       summary,
-      security: [{ bearerAuth: [] }],
+      security: [{ oauth2: [] }, { bearerAuth: [] }],
       responses: responses(successSchema),
     },
   };
@@ -330,10 +330,11 @@ export function createOpenApiDocument(baseUrl: string) {
       '/actions/browser': postAction('browserOperation','Compact governed browser operation: start, navigate, snapshot, click, type, wait, console, network, screenshot, or close.',{action:{type:'string',enum:['start','navigate','snapshot','click','type','wait','console','network','screenshot','viewport','accessibility','performance','close']},sessionId:integer(),headless:boolean(),executablePath:string(),url:string(),waitUntil:{type:'string',enum:['load','domcontentloaded','networkidle']},selector:string(),value:string(),pressEnter:boolean(),timeoutMs:integer(),cursor:integer(),width:integer(),height:integer()},['action'],{type:'object',properties:{result:{}},additionalProperties:true}),
     },    components: {
       securitySchemes: {
+        oauth2: { type: 'oauth2', description: 'Per-user FS workspace authorization for ChatGPT.', flows: { authorizationCode: { authorizationUrl: `${baseUrl.replace(/\/$/, '')}/oauth/authorize`, tokenUrl: `${baseUrl.replace(/\/$/, '')}/oauth/token`, scopes: { 'fs.read':'Read workspace resources', 'fs.write':'Modify workspace resources', 'fs.node':'Use enrolled execution nodes', 'fs.models':'Use configured model policy', 'fs.admin':'Administer workspace' } } } },
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          description: 'Use the FS Remote Actions API key.',
+          description: 'Legacy FS Actions bearer key. OAuth 2.0 is recommended for per-user GPT connections.',
         },
       },
       schemas,
