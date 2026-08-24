@@ -36,12 +36,14 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
 
   app.get('/healthz', async () => {
     const database = await databaseHealth();
+    const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
     return {
-      ok: !database.configured || database.healthy,
+      ok: database.healthy || (!durableRequired && !database.configured),
       service: 'fs-engineering-remote-v3',
       version: '3.0.0-dev',
       environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
       roots: config.roots.length,
+      durableRequired,
       database,
     };
   });
