@@ -9,7 +9,7 @@ import { validateConfig } from '../src/config.js';
 
 async function fixture() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fs-platform-'));
-  const pm = new ProcessManager({ shell: 'powershell.exe', maxOutputBytes: 1024 * 1024 });
+  const pm = new ProcessManager({ shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/sh', maxOutputBytes: 1024 * 1024 });
   const config = validateConfig({ endpointSecret: 'm'.repeat(48), actionsSecret: 'a'.repeat(48), roots: [{ name: 'work', path: dir }] });
   return { dir, pm, ops: new RemoteOperations(config, pm) };
 }
@@ -50,7 +50,7 @@ test('memory names cannot escape the governed .agent directory', async () => {
 
 test('long-running process output includes supervision metadata', async () => {
   const { dir, pm } = await fixture();
-  const started=pm.start("Write-Output 'hello'; Start-Sleep -Seconds 5",dir);
+  const started=pm.start(process.platform === 'win32' ? "Write-Output 'hello'; Start-Sleep -Seconds 5" : "printf 'hello\n'; sleep 5",dir);
   await new Promise(r=>setTimeout(r,400));
   const state=pm.read(started.processId,0);
   assert.equal(state.processId,started.processId); assert.equal(state.alive,true); assert.ok(state.startedAt); assert.ok(state.lastActivityAt); assert.match(state.command,/hello/);

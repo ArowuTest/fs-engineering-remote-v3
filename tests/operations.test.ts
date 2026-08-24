@@ -15,7 +15,7 @@ async function fixture() {
     actionsSecret: 'ops-actions-'.padEnd(48, 'y'),
     roots: [{ name: 'fixture', path: dir }],
   });
-  const manager = new ProcessManager({ shell: 'powershell.exe', maxOutputBytes: 100_000 });
+  const manager = new ProcessManager({ shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/sh', maxOutputBytes: 100_000 });
   return { dir, config, ops: createRemoteOperations(config, manager) };
 }
 
@@ -44,7 +44,7 @@ test('shared operations write and edit files through the configured root policy'
 
 test('shared operations permit normal engineering delivery commands', async () => {
   const { ops } = await fixture();
-  const result = await ops.runCommand('fixture', '.', 'Write-Output delivery-enabled');
+  const result = await ops.runCommand('fixture', '.', process.platform === 'win32' ? 'Write-Output delivery-enabled' : 'printf delivery-enabled');
   assert.match(result.stdout, /delivery-enabled/);
 });
 test('shared operations advertise command, process, Git and skill capabilities explicitly', async () => {

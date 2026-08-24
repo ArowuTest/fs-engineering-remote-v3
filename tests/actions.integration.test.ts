@@ -89,7 +89,7 @@ test('Actions can run normal engineering commands including Git delivery syntax'
   const { app } = await fixture();
   const ok = await app.inject({
     method: 'POST', url: '/actions/run-command', headers: auth(),
-    payload: { root: 'fixture', cwd: '.', command: "Write-Output 'ACTIONS_OK'" },
+    payload: { root: 'fixture', cwd: '.', command: process.platform === 'win32' ? "Write-Output 'ACTIONS_OK'" : "printf 'ACTIONS_OK\n'" },
   });
   assert.equal(ok.statusCode, 200);
   assert.match(ok.json().stdout, /ACTIONS_OK/);
@@ -105,7 +105,7 @@ test('Actions share long-running process state across start and read calls', asy
   const { app } = await fixture();
   const started = await app.inject({
     method: 'POST', url: '/actions/start-process', headers: auth(),
-    payload: { root: 'fixture', cwd: '.', command: "Start-Sleep -Milliseconds 250; Write-Output 'ASYNC_ACTION_OK'" },
+    payload: { root: 'fixture', cwd: '.', command: process.platform === 'win32' ? "Start-Sleep -Milliseconds 250; Write-Output 'ASYNC_ACTION_OK'" : "sleep 0.25; printf 'ASYNC_ACTION_OK\n'" },
   });
   assert.equal(started.statusCode, 200);
   const processId = started.json().processId as number;
@@ -129,7 +129,7 @@ test('Actions can stop a long-running process started by this service', async ()
   const { app } = await fixture();
   const started = await app.inject({
     method: 'POST', url: '/actions/start-process', headers: auth(),
-    payload: { root: 'fixture', cwd: '.', command: 'Start-Sleep -Seconds 30' },
+    payload: { root: 'fixture', cwd: '.', command: process.platform === 'win32' ? 'Start-Sleep -Seconds 30' : 'sleep 30' },
   });
   assert.equal(started.statusCode, 200);
   const processId = started.json().processId as number;

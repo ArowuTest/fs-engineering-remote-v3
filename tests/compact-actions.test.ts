@@ -14,7 +14,7 @@ async function post(app:any,url:string,payload:any){const r=await app.inject({me
 test('compact Actions preserve filesystem, process, engineering and memory capabilities',async()=>{const{app}=await fixture();try{
   await post(app,'/actions/fs',{action:'write',root:'work',path:'a.txt',content:'hello'});
   const read=await post(app,'/actions/fs',{action:'read',root:'work',path:'a.txt'});assert.match(read.content,/hello/);
-  const run=await post(app,'/actions/process',{action:'run',root:'work',command:'Write-Output compact'});assert.match(run.stdout,/compact/);
+  const run=await post(app,'/actions/process',{action:'run',root:'work',command:process.platform === 'win32'?'Write-Output compact':'printf compact'});assert.match(run.stdout,/compact/);
   const health=await post(app,'/actions/engineering',{action:'health'});assert.equal(health.ok,true);
   await post(app,'/actions/memory',{action:'write',root:'work',name:'decisions.md',content:'compact memory'});
   const mem=await post(app,'/actions/memory',{action:'read',root:'work',name:'decisions.md'});assert.equal(mem.content,'compact memory');

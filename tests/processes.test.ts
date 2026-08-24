@@ -4,7 +4,7 @@ import os from 'node:os';
 import { ProcessManager } from '../src/processes.js';
 
 const manager = new ProcessManager({
-  shell: 'powershell.exe',
+  shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/sh',
   maxOutputBytes: 100_000,
 });
 
@@ -20,7 +20,7 @@ async function waitForExit(processId: number, timeoutMs = 5_000) {
 
 test('run captures stdout and exit code', async () => {
   const result = await manager.run(
-    "Write-Output 'FS_REMOTE_OK'",
+    process.platform === 'win32' ? "Write-Output 'FS_REMOTE_OK'" : "printf 'FS_REMOTE_OK\n'",
     os.tmpdir(),
     10_000,
   );
@@ -30,7 +30,7 @@ test('run captures stdout and exit code', async () => {
 });
 test('start and read preserve output until the job exits', async () => {
   const { processId } = manager.start(
-    "Start-Sleep -Milliseconds 250; Write-Output 'ASYNC_OK'",
+    process.platform === 'win32' ? "Start-Sleep -Milliseconds 250; Write-Output 'ASYNC_OK'" : "sleep 0.25; printf 'ASYNC_OK\n'",
     os.tmpdir(),
   );
   const state = await waitForExit(processId);
@@ -41,7 +41,7 @@ test('start and read preserve output until the job exits', async () => {
 
 test('stop terminates a long-running job', async () => {
   const { processId } = manager.start(
-    'Start-Sleep -Seconds 30',
+    process.platform === 'win32' ? 'Start-Sleep -Seconds 30' : 'sleep 30',
     os.tmpdir(),
   );
   const stopped = manager.stop(processId);
@@ -52,7 +52,7 @@ test('stop terminates a long-running job', async () => {
 
 test('run times out and reports the timeout', async () => {
   const result = await manager.run(
-    'Start-Sleep -Seconds 5',
+    process.platform === 'win32' ? 'Start-Sleep -Seconds 5' : 'sleep 5',
     os.tmpdir(),
     150,
   );

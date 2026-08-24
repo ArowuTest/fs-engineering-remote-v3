@@ -25,6 +25,11 @@ export interface RunResult {
   timedOut: boolean;
 }
 
+function shellInvocation(shell: string, command: string): string[] {
+  const name = shell.toLowerCase().replace(/\\/g, '/').split('/').at(-1) ?? shell.toLowerCase();
+  return name.startsWith('powershell') || name.startsWith('pwsh') ? ['-NoProfile', '-Command', command] : ['-c', command];
+}
+
 function commandEnvironment(): NodeJS.ProcessEnv {
   const comspec = process.env.ComSpec ?? process.env.COMSPEC ?? 'C:\\Windows\\System32\\cmd.exe';
   return { ...process.env, ComSpec: comspec, COMSPEC: comspec };
@@ -36,7 +41,7 @@ export class ProcessManager {
 
   async run(command: string, cwd: string, timeoutMs: number): Promise<RunResult> {
     return await new Promise((resolve) => {
-      const child = spawn(this.options.shell, ['-NoProfile', '-Command', command], {
+      const child = spawn(this.options.shell, shellInvocation(this.options.shell, command), {
         cwd,
         env: commandEnvironment(),
         windowsHide: true,
@@ -67,7 +72,7 @@ export class ProcessManager {
   }
 
   start(command: string, cwd: string): { processId: number } {
-    const child = spawn(this.options.shell, ['-NoProfile', '-Command', command], {
+    const child = spawn(this.options.shell, shellInvocation(this.options.shell, command), {
       cwd,
       env: commandEnvironment(),
       windowsHide: true,

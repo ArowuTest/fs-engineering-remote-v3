@@ -9,7 +9,7 @@ import { validateConfig } from '../src/config.js';
 
 async function fixture() {
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'fs-evidence-'));
-  const pm=new ProcessManager({shell:'powershell.exe',maxOutputBytes:1024*1024});
+  const pm=new ProcessManager({shell:process.platform === 'win32'?'powershell.exe':'/bin/sh',maxOutputBytes:1024*1024});
   const config=validateConfig({endpointSecret:'m'.repeat(48),actionsSecret:'a'.repeat(48),roots:[{name:'work',path:dir}]});
   const ops=new RemoteOperations(config,pm);
   const {spawnSync}=await import('node:child_process');

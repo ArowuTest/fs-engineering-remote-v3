@@ -54,7 +54,7 @@ export function validateConfig(raw: RawConfig): AppConfig {
     roots,
     commandTimeoutMs: raw.commandTimeoutMs ?? 120_000,
     maxOutputBytes: raw.maxOutputBytes ?? 2_000_000,
-    shell: raw.shell ?? 'powershell.exe',
+    shell: raw.shell ?? (process.platform === 'win32' ? 'powershell.exe' : '/bin/sh'),
     diagnosticsExternalBaseUrl: raw.diagnosticsExternalBaseUrl ?? process.env.FS_REMOTE_PUBLIC_BASE_URL ?? 'https://fs.fs-mcp.com',
   };
 }
