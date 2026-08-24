@@ -14,7 +14,7 @@ The control plane is designed to run continuously on Railway; local execution no
 - `FS_HOSTED_GITHUB_TOKEN` - GitHub token used only by the hosted Git executor.
 - `FS_HOSTED_REPOSITORIES` - comma-separated allow-list, e.g. `ArowuTest/fs-engineering-remote-v3`.
 
-Keep all secrets in Railway variables; do not put them in GPT instructions, job payloads, or the repository. Startup runs the database migrations before accepting traffic. Railway should deploy from `main`; `/health` is the deployment health check.
+Keep all secrets in Railway variables; do not put them in GPT instructions, job payloads, or the repository. Startup runs the database migrations before accepting traffic. Railway should deploy from `main`; `/healthz` is the deployment health check.
 
 ## GPT connection
 
