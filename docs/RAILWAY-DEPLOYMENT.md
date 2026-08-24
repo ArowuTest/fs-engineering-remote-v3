@@ -11,8 +11,8 @@ The control plane is designed to run continuously on Railway; local execution no
 - `FS_GPT_OAUTH_CLIENT_ID` - OAuth client id configured in the Custom GPT.
 - `FS_GPT_OAUTH_CLIENT_SECRET` - OAuth client secret configured in the Custom GPT.
 - `FS_GPT_OAUTH_REDIRECT_URIS` - comma-separated exact ChatGPT OAuth callback URI(s).
-- `FS_HOSTED_GITHUB_TOKEN` - GitHub token used only by the hosted Git executor.
-- `FS_HOSTED_REPOSITORIES` - comma-separated allow-list, e.g. `ArowuTest/fs-engineering-remote-v3`.
+- `GITHUB_TOKEN` - GitHub token used by the hosted Git executor and GitHub provider. Store it only as a Railway secret.
+- `FS_HOSTED_GIT_REPOSITORIES` - comma-separated allow-list, e.g. `ArowuTest/fs-engineering-remote-v3`.
 - `FS_BOOTSTRAP_OWNER_USERNAME` and `FS_BOOTSTRAP_OWNER_PASSWORD` - required only while creating the first account on a fresh database. The password must be 12+ characters.
 - `FS_BOOTSTRAP_WORKSPACE_NAME` / `FS_BOOTSTRAP_WORKSPACE_SLUG` - optional initial workspace identity.
 
