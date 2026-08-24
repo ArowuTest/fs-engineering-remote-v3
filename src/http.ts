@@ -25,6 +25,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
     onerror: (error) => console.error('[mcp-adapter]', error),
   });
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_request, body, done) => { try { done(null, Object.fromEntries(new URLSearchParams(body as string))); } catch (error) { done(error as Error, undefined); } });
 
   app.addHook('onSend', async (_request, reply, payload) => { reply.header('x-content-type-options','nosniff'); reply.header('referrer-policy','no-referrer'); reply.header('x-frame-options','DENY'); return payload; });
 
