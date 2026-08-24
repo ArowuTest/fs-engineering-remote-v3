@@ -13,3 +13,7 @@ runtime/
 .node-secret
 
 scripts/start-v3-node.ps1
+
+validation/
+
+gate.tmp
