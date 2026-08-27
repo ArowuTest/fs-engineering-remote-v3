@@ -17,3 +17,12 @@ scripts/start-v3-node.ps1
 validation/
 
 gate.tmp
+
+# Never commit machine-specific Cloudflare tunnel configs/credentials
+config/tunnel*.yml
+config/tunnel*.yaml
+config/tunnel*.json
+!config/tunnel.example.yml
+!config/tunnel.example.yaml
+!config/tunnel.example.json
+
