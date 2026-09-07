@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+﻿import Fastify, { type FastifyInstance } from 'fastify';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { registerActionsRoutes } from './actions.js';
@@ -6,6 +6,8 @@ import { type AppConfig } from './config.js';
 import { createRemoteOperations } from './operations.js';
 import { ProcessManager } from './processes.js';
 import { createRemoteServer } from './server.js';
+import path from 'node:path';
+import { runtimeIdentity } from './runtime.js';
 import { databaseHealth } from './db.js';
 import { registerNodeRoutes } from './node-http.js';
 import { HostedEngineering } from './hosted-engineering.js';
@@ -18,6 +20,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
     shell: config.shell,
     maxOutputBytes: config.maxOutputBytes,
+    stateDir: path.join(runtimeIdentity().stateRoot, 'exec-sessions'),
   });
   const operations = createRemoteOperations(config, processes);
   const handler = createMcpHandler(() => createRemoteServer(config, processes, operations));
