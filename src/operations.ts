@@ -13,6 +13,7 @@ import { GitHubProvider, type GitHubAction } from './github.js';
 import { runtimeIdentity } from './runtime.js';
 import { HandoffStore } from './handoff.js';
 import { MissionOrchestrator } from './orchestrator.js';
+import { OpenSandboxProvider } from './sandbox.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -35,6 +36,7 @@ export class RemoteOperations {
   private readonly handoffs: HandoffStore;
   private readonly github = new GitHubProvider();
   private readonly orchestrator: MissionOrchestrator;
+  private readonly sandbox = new OpenSandboxProvider();
 
   constructor(
     private readonly config: AppConfig,
@@ -110,6 +112,8 @@ export class RemoteOperations {
     };
   }
 
+  async sandboxCapabilities(){return this.sandbox.capabilities();}
+  async sandboxHealth(){return this.sandbox.status();}
   async diagnoseRuntime() {
     return await this.diagnostics.diagnose();
   }

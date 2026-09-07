@@ -39,6 +39,8 @@ export function createRemoteServer(
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, async () => text(await ops.capabilities()));
 
+  server.registerTool('sandbox_capabilities',{title:'Sandbox execution capabilities',description:'Describe the optional OpenSandbox execution provider. Local execution remains the default.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>text(await ops.sandboxCapabilities()));
+  server.registerTool('sandbox_health',{title:'Sandbox provider health',description:'Probe the optional OpenSandbox provider without affecting local or hosted execution.',annotations:{readOnlyHint:true,openWorldHint:true}},async()=>text(await ops.sandboxHealth()));
   server.registerTool('diagnose_runtime', {
     title: 'Diagnose FS Remote runtime',
     description: 'Diagnose the local server, port/health endpoint, Cloudflare connector, external endpoint, OpenAPI and Actions authentication chain.',
