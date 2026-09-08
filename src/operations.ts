@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -460,6 +460,24 @@ export class RemoteOperations {
 
 
 
+  async projectLifecycle(rootName: string, cwd: string, action: 'status'|'ensure'|'stop') {
+    const cfg = await this.projectLifecycleConfig(rootName, cwd);
+    if (!cfg.composeFile) return { schemaVersion:'fs-remote.project-lifecycle.v1', action, policy:cfg.policy, configured:cfg.configured, compose:false, changed:false, reason:'No Compose file detected.' };
+    const fileArg = `-f ${psQuote(cfg.composeFile)}`;
+    if (action === 'status') {
+      const result = await this.processes.run(`docker compose ${fileArg} ps --all`, cfg.workingDirectory, this.config.commandTimeoutMs);
+      return { schemaVersion:'fs-remote.project-lifecycle.v1', action, policy:cfg.policy, configured:cfg.configured, composeFile:cfg.composeFile, changed:false, result };
+    }
+    if (cfg.policy === 'protected') return { schemaVersion:'fs-remote.project-lifecycle.v1', action, policy:cfg.policy, composeFile:cfg.composeFile, changed:false, protected:true, reason:'Protected project lifecycle cannot be changed automatically.' };
+    if (action === 'stop' && cfg.policy !== 'ephemeral') return { schemaVersion:'fs-remote.project-lifecycle.v1', action, policy:cfg.policy, composeFile:cfg.composeFile, changed:false, reason:'Only ephemeral projects may be automatically stopped.' };
+    if (action === 'stop') await this.saveRecoveryCheckpoint(rootName, cwd, 'before_ephemeral_runtime_stop', { policy: cfg.policy, composeFile: cfg.composeFile });
+    const command = action === 'ensure' ? `docker compose ${fileArg} up -d` : `docker compose ${fileArg} stop`;
+    const result = await this.processes.run(command, cfg.workingDirectory, this.config.commandTimeoutMs);
+    await this.appendAgentEvent(rootName, cwd, { type: action === 'ensure' ? 'PROJECT_RUNTIME_ENSURED' : 'PROJECT_RUNTIME_STOPPED', policy:cfg.policy, composeFile:cfg.composeFile });
+    return { schemaVersion:'fs-remote.project-lifecycle.v1', action, policy:cfg.policy, composeFile:cfg.composeFile, changed:true, destructive:false, result };
+  }
+
+
   async gitStatus(rootName: string, cwd = '.') {
     const root = this.getRoot(rootName);
     const workingDirectory = resolveInRoot(root, cwd);
@@ -717,4 +735,3 @@ export class RemoteOperations {
 export function createRemoteOperations(config: AppConfig, processes: ProcessManager, workspaceId?: string) {
   return new RemoteOperations(config, processes, undefined, undefined, workspaceId);
 }
-
