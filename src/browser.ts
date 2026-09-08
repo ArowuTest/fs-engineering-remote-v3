@@ -8,8 +8,11 @@ export type BrowserNetworkEntry = { method: string; url: string; resourceType: s
 
 type Session = {
   id: number; browser: Browser; context: BrowserContext; page: Page; executablePath: string;
-  console: BrowserConsoleEntry[]; network: BrowserNetworkEntry[];
+  console: BrowserConsoleEntry[]; network: BrowserNetworkEntry[]; lastActivityAt:number;
 };
+const MAX_BROWSER_SESSIONS=8,MAX_CONSOLE_ENTRIES=2000,MAX_NETWORK_ENTRIES=4000,SESSION_IDLE_MS=30*60*1000;
+function boundedPush<T>(items:T[],value:T,max:number){items.push(value);if(items.length>max)items.splice(0,items.length-max)}
+function assertPublicNavigation(raw:string){const u=new URL(raw);if(!['http:','https:'].includes(u.protocol))throw new Error('Browser navigation only supports http/https URLs.');const h=u.hostname.toLowerCase();if(h==='localhost'||h==='0.0.0.0'||h==='::1'||h.endsWith('.local')||/^127\./.test(h)||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h))throw new Error('Browser navigation to local/private network targets is blocked.');return u.toString()}
 
 const BROWSER_PATHS = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -29,15 +32,16 @@ export class BrowserManager {
   }
 
   async start(opts: { headless?: boolean; executablePath?: string } = {}) {
+    for(const [id,s] of this.sessions)if(Date.now()-s.lastActivityAt>SESSION_IDLE_MS)await this.close(id).catch(()=>{});if(this.sessions.size>=MAX_BROWSER_SESSIONS)throw new Error('Browser session limit reached.');
     const available = await this.availableBrowsers();
     const executablePath = opts.executablePath ?? available[0];
     if (!executablePath || !available.includes(executablePath)) throw new Error('No approved Chrome/Edge executable is available.');
     const browser = await chromium.launch({ executablePath, headless: opts.headless ?? true });
     const context = await browser.newContext();
     const page = await context.newPage();
-    const session: Session = { id: this.nextId++, browser, context, page, executablePath, console: [], network: [] };
-    page.on('console', msg => session.console.push({ type: msg.type(), text: msg.text(), timestamp: new Date().toISOString() }));
-    page.on('request', (req: Request) => session.network.push({ method: req.method(), url: req.url(), resourceType: req.resourceType(), timestamp: new Date().toISOString() }));
+    const session: Session = { id: this.nextId++, browser, context, page, executablePath, console: [], network: [],lastActivityAt:Date.now() };
+    page.on('console', msg => boundedPush(session.console,{ type: msg.type(), text: msg.text(), timestamp: new Date().toISOString() },MAX_CONSOLE_ENTRIES));
+    page.on('request', (req: Request) => boundedPush(session.network,{ method: req.method(), url: req.url(), resourceType: req.resourceType(), timestamp: new Date().toISOString() },MAX_NETWORK_ENTRIES));
     page.on('response', (res: Response) => { const e=[...session.network].reverse().find(x=>x.url===res.url() && x.status===undefined); if(e)e.status=res.status(); });
     page.on('requestfailed', req => { const e=[...session.network].reverse().find(x=>x.url===req.url() && x.failure===undefined); if(e)e.failure=req.failure()?.errorText ?? 'request failed'; });
     this.sessions.set(session.id, session);
@@ -46,8 +50,8 @@ export class BrowserManager {
 
   private get(id: number) { const s=this.sessions.get(id); if(!s) throw new Error(`Unknown browser session ${id}.`); return s; }
   async navigate(id: number, url: string, waitUntil: 'load'|'domcontentloaded'|'networkidle' = 'domcontentloaded') {
-    if (!/^https?:\/\//i.test(url)) throw new Error('Browser navigation only supports http/https URLs.');
-    const s=this.get(id); const response=await s.page.goto(url,{waitUntil,timeout:30000});
+    const safeUrl=assertPublicNavigation(url);
+    const s=this.get(id);s.lastActivityAt=Date.now(); const response=await s.page.goto(safeUrl,{waitUntil,timeout:30000});
     return { url:s.page.url(), title:await s.page.title(), status:response?.status() ?? null };
   }
   async snapshot(id: number) {
