@@ -17,6 +17,7 @@ import { HandoffStore } from './handoff.js';
 import { MissionOrchestrator } from './orchestrator.js';
 import { OpenSandboxProvider } from './sandbox.js';
 import { OperatorStatus, type RiskItem } from './operator-status.js';
+import { candidateSpec, evaluatePromotion, type PromotionCandidate, type PromotionSample, type PromotionPolicy } from './promotion.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -117,6 +118,8 @@ export class RemoteOperations {
     };
   }
 
+  async promotionCandidate(input:PromotionCandidate){return candidateSpec(input);}
+  async promotionEvaluate(samples:PromotionSample[],policy:PromotionPolicy){return evaluatePromotion(samples,policy);}
   async operatorStatusSnapshot(input:{missionId?:string;checks?:Array<{kind:string;status:string}>;risks?:RiskItem[]}={}){let mission:any=null;if(input.missionId)mission=await this.missions.get(input.missionId);const workerStatus=await this.workers.status();return this.operatorStatus.snapshot({workspaceId:this.workspaceId,mission,workerStatus,checks:input.checks,risks:input.risks});}
   async sandboxCapabilities(){return this.sandbox.capabilities();}
   async sandboxHealth(){return this.sandbox.status();}
