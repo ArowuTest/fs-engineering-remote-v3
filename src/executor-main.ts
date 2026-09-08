@@ -41,6 +41,12 @@ executor.register('hosted_git', async item => {
   return { result: result as unknown as Record<string,unknown>, evidence: [{ kind: 'hosted_git', source: 'railway-worker', status: 'pass', summary: `Hosted Git branch ${result.branch} committed and pushed at ${result.commit}.`, data: { repository: result.repository, branch: result.branch, commit: result.commit, changed: result.changed, verification: result.verification.map(v=>({command:v.command,ok:v.ok})) } }] };
 });
 
+executor.register('hosted_execution', async item => {
+  const capability=String(item.payload.capability??''),operation=String(item.payload.operation??'');
+  if(capability==='git'&&operation==='hosted_apply'){const result=await new HostedGitExecutor().execute(item.payload as any);return{result:result as any,evidence:[{kind:'hosted_execution',source:'railway-worker',status:'pass',summary:`Hosted Git execution completed at ${result.commit}.`,data:{target:'hosted',capability,operation,commit:result.commit,changed:result.changed}}]};}
+  throw new Error(`Hosted executor does not implement ${capability}/${operation}; route to local or sandbox, or add a governed hosted adapter.`);
+});
+
 executor.register('evidence', async item => ({
   result: { recorded: true },
   evidence: [{
