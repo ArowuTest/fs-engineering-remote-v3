@@ -39,6 +39,7 @@ export function createRemoteServer(
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, async () => text(await ops.capabilities()));
 
+  server.registerTool('operator_status',{title:'Operator status and quality gate',description:'Return a versioned harness-neutral status payload covering mission, queue, execution providers, checks, risks and stop-loss blockers.',inputSchema:z.object({missionId:z.string().optional(),checks:z.array(z.object({kind:z.string(),status:z.string()})).default([]),risks:z.array(z.object({code:z.string(),severity:z.enum(['low','medium','high','critical']),summary:z.string(),blocking:z.boolean()})).default([])}),annotations:{readOnlyHint:true,openWorldHint:false}},async(input)=>text(await ops.operatorStatusSnapshot(input)));
   server.registerTool('sandbox_capabilities',{title:'Sandbox execution capabilities',description:'Describe the optional OpenSandbox execution provider. Local execution remains the default.',annotations:{readOnlyHint:true,openWorldHint:false}},async()=>text(await ops.sandboxCapabilities()));
   server.registerTool('sandbox_health',{title:'Sandbox provider health',description:'Probe the optional OpenSandbox provider without affecting local or hosted execution.',annotations:{readOnlyHint:true,openWorldHint:true}},async()=>text(await ops.sandboxHealth()));
   server.registerTool('diagnose_runtime', {

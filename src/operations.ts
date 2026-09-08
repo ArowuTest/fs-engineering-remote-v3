@@ -16,6 +16,7 @@ import { runtimeIdentity } from './runtime.js';
 import { HandoffStore } from './handoff.js';
 import { MissionOrchestrator } from './orchestrator.js';
 import { OpenSandboxProvider } from './sandbox.js';
+import { OperatorStatus, type RiskItem } from './operator-status.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -39,6 +40,7 @@ export class RemoteOperations {
   private readonly github = new GitHubProvider();
   private readonly orchestrator: MissionOrchestrator;
   private readonly sandbox = new OpenSandboxProvider();
+  private readonly operatorStatus = new OperatorStatus(this.sandbox);
 
   constructor(
     private readonly config: AppConfig,
@@ -115,6 +117,7 @@ export class RemoteOperations {
     };
   }
 
+  async operatorStatusSnapshot(input:{missionId?:string;checks?:Array<{kind:string;status:string}>;risks?:RiskItem[]}={}){let mission:any=null;if(input.missionId)mission=await this.missions.get(input.missionId);const workerStatus=await this.workers.status();return this.operatorStatus.snapshot({workspaceId:this.workspaceId,mission,workerStatus,checks:input.checks,risks:input.risks});}
   async sandboxCapabilities(){return this.sandbox.capabilities();}
   async sandboxHealth(){return this.sandbox.status();}
   async diagnoseRuntime() {
