@@ -20,6 +20,7 @@ import { OperatorStatus, type RiskItem } from './operator-status.js';
 import { candidateSpec, evaluatePromotion, type PromotionCandidate, type PromotionSample, type PromotionPolicy } from './promotion.js';
 import { budgetGate, mergeQueue, type AutonomousBudget, type Usage, type MergeCandidate } from './governance.js';
 import { createPortableMemory, memoryPolicy, type PortableMemory } from './memory-trust.js';
+import { quotaDecision, usageEnvelope, type WorkspaceQuota, type WorkspaceUsage, type ExecutionUsage } from './accounting.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -120,6 +121,9 @@ export class RemoteOperations {
     };
   }
 
+  async workspaceQuotaGate(quota:WorkspaceQuota,usage:WorkspaceUsage){return quotaDecision(quota,usage);}
+  async executionUsage(input:ExecutionUsage){return usageEnvelope(input);}
+  async sandboxCleanup(sandboxId:string){return this.sandbox.cleanup(sandboxId);}
   async autonomousBudgetGate(budget:AutonomousBudget,usage:Usage){return budgetGate(budget,usage);}
   async mergeGovernance(candidates:MergeCandidate[]){return mergeQueue(candidates);}
   async portableMemoryCreate(input:Omit<PortableMemory,'schemaVersion'|'id'|'createdAt'>){const memory=createPortableMemory(input);return{memory,policy:memoryPolicy(memory)};}
