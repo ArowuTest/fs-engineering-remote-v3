@@ -1,37 +1,41 @@
 {
-  "name": "fs-engineering-remote-v3",
-  "version": "3.0.0-dev",
-  "main": "index.js",
-  "scripts": {
-    "test": "tsx --test tests/**/*.test.ts",
-    "start": "tsx src/index.ts",
-    "worker": "tsx src/executor-main.ts",
-    "check": "tsc --noEmit",
-    "node:agent": "tsx src/node-main.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "type": "module",
-  "dependencies": {
-    "@modelcontextprotocol/client": "^2.0.0",
-    "@modelcontextprotocol/fastify": "^2.0.0",
-    "@modelcontextprotocol/node": "^2.0.0",
-    "@modelcontextprotocol/server": "^2.0.0",
-    "@types/node": "^26.2.0",
-    "axe-core": "^4.13.0",
-    "fastify": "^5.12.0",
-    "pg": "^8.23.0",
-    "pixelmatch": "^7.2.0",
-    "playwright-core": "^1.62.1",
-    "pngjs": "^7.0.0",
-    "tsx": "^4.23.12",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@types/pg": "^8.23.1",
-    "@types/pngjs": "^6.0.5",
-    "typescript": "^5.9.3"
-  }
+    "name":  "fs-engineering-remote-v3",
+    "version":  "3.0.0-dev",
+    "main":  "index.js",
+    "scripts":  {
+                    "test":  "tsx --test tests/**/*.test.ts",
+                    "start":  "tsx src/index.ts",
+                    "worker":  "tsx src/executor-main.ts",
+                    "check":  "tsc --noEmit",
+                    "node:agent":  "tsx src/node-main.ts",
+                    "build":  "tsc --noEmit",
+                    "validate":  "npm run check \u0026\u0026 npm test"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "description":  "",
+    "type":  "module",
+    "dependencies":  {
+                         "@modelcontextprotocol/client":  "^2.0.0",
+                         "@modelcontextprotocol/fastify":  "^2.0.0",
+                         "@modelcontextprotocol/node":  "^2.0.0",
+                         "@modelcontextprotocol/server":  "^2.0.0",
+                         "@types/node":  "^26.2.0",
+                         "axe-core":  "^4.13.0",
+                         "fastify":  "^5.12.0",
+                         "pg":  "^8.23.0",
+                         "pixelmatch":  "^7.2.0",
+                         "playwright-core":  "^1.62.1",
+                         "pngjs":  "^7.0.0",
+                         "tsx":  "^4.23.12",
+                         "zod":  "^4.4.3"
+                     },
+    "devDependencies":  {
+                            "@types/pg":  "^8.23.1",
+                            "@types/pngjs":  "^6.0.5",
+                            "typescript":  "^5.9.3"
+                        }
 }

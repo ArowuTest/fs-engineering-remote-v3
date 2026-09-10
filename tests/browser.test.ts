@@ -4,7 +4,7 @@ import http from 'node:http';
 import { BrowserManager } from '../src/browser.js';
 
 test('governed browser completes UI, console, network and screenshot lifecycle', async (t) => {
-  const manager=new BrowserManager(); const browsers=await manager.availableBrowsers();
+  const manager=new BrowserManager(true); const browsers=await manager.availableBrowsers();
   if(!browsers.length){t.skip('Chrome/Edge unavailable');return;}
   const server=http.createServer((req,res)=>{
     res.setHeader('content-type','text/html');

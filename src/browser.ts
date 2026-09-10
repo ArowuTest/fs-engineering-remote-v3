@@ -22,6 +22,7 @@ const BROWSER_PATHS = [
 ];
 
 export class BrowserManager {
+  constructor(private readonly allowPrivateNavigation=false) {}
   private sessions = new Map<number, Session>();
   private nextId = 1;
 
@@ -50,7 +51,7 @@ export class BrowserManager {
 
   private get(id: number) { const s=this.sessions.get(id); if(!s) throw new Error(`Unknown browser session ${id}.`); return s; }
   async navigate(id: number, url: string, waitUntil: 'load'|'domcontentloaded'|'networkidle' = 'domcontentloaded') {
-    const safeUrl=assertPublicNavigation(url);
+    const safeUrl=this.allowPrivateNavigation?url:assertPublicNavigation(url);
     const s=this.get(id);s.lastActivityAt=Date.now(); const response=await s.page.goto(safeUrl,{waitUntil,timeout:30000});
     return { url:s.page.url(), title:await s.page.title(), status:response?.status() ?? null };
   }
