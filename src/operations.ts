@@ -21,6 +21,7 @@ import { candidateSpec, evaluatePromotion, type PromotionCandidate, type Promoti
 import { budgetGate, mergeQueue, type AutonomousBudget, type Usage, type MergeCandidate } from './governance.js';
 import { createPortableMemory, memoryPolicy, type PortableMemory } from './memory-trust.js';
 import { quotaDecision, usageEnvelope, type WorkspaceQuota, type WorkspaceUsage, type ExecutionUsage } from './accounting.js';
+import { executionAcceptance, type ExecutionAcceptanceInput } from './acceptance.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -121,6 +122,7 @@ export class RemoteOperations {
     };
   }
 
+  async executionAcceptanceGate(input:ExecutionAcceptanceInput){return executionAcceptance(input);}
   async workspaceQuotaGate(quota:WorkspaceQuota,usage:WorkspaceUsage){return quotaDecision(quota,usage);}
   async executionUsage(input:ExecutionUsage){return usageEnvelope(input);}
   async sandboxCleanup(sandboxId:string){return this.sandbox.cleanup(sandboxId);}
