@@ -26,3 +26,8 @@ config/tunnel*.json
 !config/tunnel.example.yaml
 !config/tunnel.example.json
 
+# Local runtime/recovery state
+.agent/
+
+# Local historical rewrite backup; never ship
+.git-rewrite/
