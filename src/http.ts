@@ -1,4 +1,4 @@
-﻿import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { registerActionsRoutes } from './actions.js';
@@ -9,6 +9,7 @@ import { createRemoteServer } from './server.js';
 import path from 'node:path';
 import { runtimeIdentity } from './runtime.js';
 import { databaseHealth } from './db.js';
+import { readiness } from './readiness.js';
 import { registerNodeRoutes } from './node-http.js';
 import { HostedEngineering } from './hosted-engineering.js';
 import { registerAuthRoutes } from './auth-http.js';
@@ -50,6 +51,12 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
       durableRequired,
       database,
     };
+  });
+  app.get('/readyz', async (_request, reply) => {
+    const database = await databaseHealth();
+    const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
+    const state = readiness({database:{configured:database.configured,healthy:database.healthy},durableRequired});
+    return reply.code(state.ready?200:503).send(state);
   });
   registerActionsRoutes(app, config, operations, processes);
   registerNodeRoutes(app, config);

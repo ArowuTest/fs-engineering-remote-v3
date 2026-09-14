@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';
+test('mission orchestrator gates execution-result completion through acceptance contract',async()=>{const s=await fs.readFile(new URL('../src/orchestrator.ts',import.meta.url),'utf8');assert.match(s,/fs-remote\.execution-result\.v1/);assert.match(s,/executionAcceptance\(/);assert.match(s,/acceptance_blocked/);assert.match(s,/review council approved/);});

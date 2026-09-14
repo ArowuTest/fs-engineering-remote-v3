@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readiness} from '../src/readiness.js';
+test('hosted readiness fails closed when durable database is unavailable',()=>{const x=readiness({database:{configured:true,healthy:false},durableRequired:true});assert.equal(x.ready,false);assert.match(x.blockers.join(' '),/database/);});
+test('readiness can include executor and stale-surface blockers',()=>{const x=readiness({database:{configured:true,healthy:true},durableRequired:true,executor:{healthy:false,reason:'worker unavailable'},surface:{stale:true,reason:'catalog mismatch'}});assert.equal(x.ready,false);assert.deepEqual(x.blockers,['worker unavailable','catalog mismatch']);});
+test('healthy durable dependency produces ready state',()=>{assert.equal(readiness({database:{configured:true,healthy:true},durableRequired:true}).ready,true);});
