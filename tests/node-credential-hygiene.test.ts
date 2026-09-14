@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';
+test('distributed node startup example uses user-bound encrypted credential material',async()=>{const s=await fs.readFile(new URL('../scripts/start-v3-node.example.ps1',import.meta.url),'utf8'),p=await fs.readFile(new URL('../scripts/Provision-V3-NodeCredential.ps1',import.meta.url),'utf8');assert.match(s,/node-secret\.dpapi/);assert.match(s,/ConvertTo-SecureString/);assert.doesNotMatch(s,/FS_REMOTE_NODE_SECRET='[^']+'/);assert.match(p,/ConvertFrom-SecureString/);});
