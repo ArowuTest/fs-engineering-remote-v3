@@ -20,6 +20,10 @@ The control plane is designed to run continuously on Railway; local execution no
 
 On a fresh database, startup atomically creates the initial owner/workspace from the bootstrap variables. After the owner can sign in, remove `FS_BOOTSTRAP_OWNER_PASSWORD` from Railway; subsequent startups do not use it. Keep all secrets in Railway variables; do not put them in GPT instructions, job payloads, or the repository. Startup runs the database migrations before accepting traffic. Railway should deploy from `main`. Use `/healthz` for liveness and `/readyz` for deployment readiness; `/readyz` fails closed when required durable dependencies are unavailable.
 
+## CI-gated Railway deployment
+
+`.github/workflows/deploy-railway.yml` runs only after the `ci` workflow succeeds (or by manual dispatch). Configure these **GitHub Actions repository secrets** to enable deployment: `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_SERVICE`, `RAILWAY_ENVIRONMENT`, and `FS_PUBLIC_BASE_URL`. If they are absent, the workflow deliberately reports a successful no-op instead of attempting to create or guess a Railway project. When configured, it deploys the exact verified Git revision and then polls `<FS_PUBLIC_BASE_URL>/readyz`; deployment fails if readiness never reaches HTTP 200.
+
 ## GPT connection
 
 Import `/openapi.json` as the GPT Action schema. Configure OAuth authorization URL as `<FS_PUBLIC_BASE_URL>/oauth/authorize` and token URL as `<FS_PUBLIC_BASE_URL>/oauth/token`. Each user signs in to FS during OAuth and receives workspace-scoped permissions. The legacy Actions bearer secret remains compatibility-only.
