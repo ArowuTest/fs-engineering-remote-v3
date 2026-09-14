@@ -18,7 +18,7 @@ The control plane is designed to run continuously on Railway; local execution no
 - `FS_BOOTSTRAP_OWNER_USERNAME` and `FS_BOOTSTRAP_OWNER_PASSWORD` - required only while creating the first account on a fresh database. The password must be 12+ characters.
 - `FS_BOOTSTRAP_WORKSPACE_NAME` / `FS_BOOTSTRAP_WORKSPACE_SLUG` - optional initial workspace identity.
 
-On a fresh database, startup atomically creates the initial owner/workspace from the bootstrap variables. After the owner can sign in, remove `FS_BOOTSTRAP_OWNER_PASSWORD` from Railway; subsequent startups do not use it. Keep all secrets in Railway variables; do not put them in GPT instructions, job payloads, or the repository. Startup runs the database migrations before accepting traffic. Railway should deploy from `main`; `/healthz` is the deployment health check.
+On a fresh database, startup atomically creates the initial owner/workspace from the bootstrap variables. After the owner can sign in, remove `FS_BOOTSTRAP_OWNER_PASSWORD` from Railway; subsequent startups do not use it. Keep all secrets in Railway variables; do not put them in GPT instructions, job payloads, or the repository. Startup runs the database migrations before accepting traffic. Railway should deploy from `main`. Use `/healthz` for liveness and `/readyz` for deployment readiness; `/readyz` fails closed when required durable dependencies are unavailable.
 
 ## GPT connection
 
