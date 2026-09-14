@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';
+test('commercial schema persists workspace quotas and execution usage',async()=>{const s=await fs.readFile(new URL('../src/multi-user-schema.ts',import.meta.url),'utf8');assert.match(s,/CREATE TABLE IF NOT EXISTS workspace_quotas/);assert.match(s,/CREATE TABLE IF NOT EXISTS execution_usage/);assert.match(s,/VALUES\(3\)/);});
+test('execution router gates dispatch using workspace accounting before selecting provider',async()=>{const s=await fs.readFile(new URL('../src/execution-router.ts',import.meta.url),'utf8');assert.match(s,/new AccountingStore\(x\.workspaceId\)\.gate\(\)/);assert.match(s,/WORKSPACE_QUOTA_EXCEEDED/);});

@@ -82,7 +82,7 @@ executor.register('reasoning', async item => {
       evidence: evidence.filter(e => e.stepId === item.stepId),
       quality: promptContext.quality,
     };
-    const dispatch = await new PlanDispatcher().dispatch(mission.id, item.stepId, plan, expected);
+    const dispatch = await new PlanDispatcher().dispatch(mission.id, item.stepId, plan, expected, mission.workspaceId);
     return {
       result: { provider: out.provider, model: out.model, text: out.text, requestId: out.requestId, plan, dispatch },
       evidence: [{ kind: 'reasoning', source: `${out.provider}:${out.model}`, status: 'info', summary: 'Autonomous reasoning completed.', data: { requestId: out.requestId } }],
