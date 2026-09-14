@@ -93,7 +93,7 @@ export class RemoteOperations {
         processes: ['start_process','read_process_output','stop_process','exec_list','exec_poll','exec_write','exec_cancel'],
         git: ['git_status','git_diff','git_stage','git_commit','git_push','inspect_repository','git_worktree_list','git_worktree_create','git_worktree_remove','changed_since'],
         memory: ['read_agent_memory','write_agent_memory','append_agent_event','save_checkpoint','load_checkpoint','save_project_context','load_project_context','resume_project'],
-        engineering: ['project_readiness','engineering_evidence','plan_work','run_engineering_check','docker_project_status','docker_project_logs','evidence_bundle','run_deployment','database_capabilities', 'database_health', 'database_schema', 'database_query', 'database_explain'],
+        engineering: ['project_readiness','engineering_evidence','plan_work','run_engineering_check','docker_project_status','docker_project_logs','evidence_bundle','run_deployment','execution_acceptance_gate','database_capabilities', 'database_health', 'database_schema', 'database_query', 'database_explain'],
         missions: ['create','list','get','start','next','approve','verify','block','interrupt','resume','cancel','summary','autonomous_advance','autonomous_reconcile'],
         evidence: ['record','list','repository','tests','browser','database','deployment','external_provider'],
         runtimeInstance: this.runtime,
