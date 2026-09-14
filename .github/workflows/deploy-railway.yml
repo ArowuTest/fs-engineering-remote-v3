@@ -1,0 +1,54 @@
+name: deploy-railway
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: railway-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
+      FS_PUBLIC_BASE_URL: ${{ secrets.FS_PUBLIC_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Check deployment credentials
+        id: credentials
+        shell: bash
+        run: |
+          if [[ -n "$RAILWAY_TOKEN" && -n "$RAILWAY_PROJECT_ID" && -n "$RAILWAY_SERVICE" && -n "$RAILWAY_ENVIRONMENT" && -n "$FS_PUBLIC_BASE_URL" ]]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo 'Railway deployment skipped: configure RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_SERVICE, RAILWAY_ENVIRONMENT and FS_PUBLIC_BASE_URL repository secrets.'
+          fi
+      - name: Deploy verified revision
+        if: steps.credentials.outputs.configured == 'true'
+        run: npx -y @railway/cli up --ci --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE" --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $GITHUB_SHA"
+      - name: Verify fail-closed readiness
+        if: steps.credentials.outputs.configured == 'true'
+        shell: bash
+        run: |
+          base="${FS_PUBLIC_BASE_URL%/}"
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o ready.json -w '%{http_code}' --max-time 10 "$base/readyz" || true)
+            if [[ "$code" == '200' ]]; then
+              cat ready.json
+              exit 0
+            fi
+            echo "readyz attempt $attempt returned $code"
+            sleep 10
+          done
+          echo 'Deployment never reached /readyz=200.' >&2
+          exit 1
