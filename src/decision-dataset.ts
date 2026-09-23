@@ -4,5 +4,5 @@ export interface DecisionExample{schemaVersion:'fs.decision.example.v1';projectH
 const hash=(x:string)=>crypto.createHash('sha256').update(x).digest('hex');
 export function createDecisionExample(input:{projectId:string;trajectoryId:string;request:DecisionRequest;observed?:DecisionResult;labels:DecisionOutcomeLabel[];timestamp?:string}):DecisionExample{return{schemaVersion:'fs.decision.example.v1',projectHash:hash(input.projectId),trajectoryHash:hash(`${input.projectId}:${input.trajectoryId}`),timestamp:input.timestamp??new Date().toISOString(),request:input.request,observed:input.observed,labels:input.labels}}
 export type DatasetSplit='train'|'calibration'|'test';
-export function splitDecisionExample(example:DecisionExample):DatasetSplit{const n=parseInt(example.trajectoryHash.slice(0,8),16)%100;return n<70?'train':n<85?'calibration':'test'}
+export function splitDecisionExample(example:DecisionExample):DatasetSplit{const n=parseInt(example.projectHash.slice(0,8),16)%100;return n<70?'train':n<85?'calibration':'test'}
 export function assertOutcomeGrounded(example:DecisionExample){for(const l of example.labels)if(l.source==='deterministic_outcome'&&!l.evidenceIds.length)throw new Error(`Outcome-grounded label ${l.questionId} requires evidence.`);return example}
