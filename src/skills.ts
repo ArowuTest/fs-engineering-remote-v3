@@ -123,7 +123,7 @@ export class SkillCatalog {
   async list(query = '', source?: SkillSource, limit = 50): Promise<SkillSummary[]> {
     const registry = await this.load();
     const needle = query.trim().toLowerCase();
-    const safeLimit = Math.max(1, Math.min(limit, 200));
+    const safeLimit = Math.max(1, Math.min(limit, 500));
     return registry.skills
       .filter((skill) => !source || skill.source === source)
       .filter((skill) => {
