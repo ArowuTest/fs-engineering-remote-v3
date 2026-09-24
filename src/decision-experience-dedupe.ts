@@ -1,0 +1,3 @@
+import type {ExperienceOutcome} from './decision-experience-store.js';
+export function mergeExperienceOutcomes(xs:ExperienceOutcome[]){const byId=new Map<string,ExperienceOutcome>();for(const x of xs)if(!byId.has(x.id))byId.set(x.id,x);return[...byId.values()].sort((a,b)=>a.timestamp.localeCompare(b.timestamp))}
+export function experienceIndependence(xs:ExperienceOutcome[]){const projects=new Set(xs.map(x=>x.projectHash)),trajectories=new Set(xs.map(x=>x.trajectoryHash));return{outcomes:xs.length,projects:projects.size,trajectories:trajectories.size,duplicateOutcomes:xs.length-new Set(xs.map(x=>x.id)).size}}
