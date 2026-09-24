@@ -58,7 +58,7 @@ export class RemoteOperations {
     this.missions = new MissionManager(path.join(this.runtime.stateRoot,'missions'), workspaceId);
     this.workers = new WorkerQueue(path.join(this.runtime.stateRoot,'work-queue'),120000,workspaceId);
     this.handoffs = new HandoffStore(path.join(this.runtime.stateRoot,'missions'));
-    this.orchestrator = new MissionOrchestrator(this.missions,this.workers);
+    this.orchestrator = new MissionOrchestrator(this.missions,this.workers,path.join(this.runtime.stateRoot,'decision-learning'));
   }
 
   private getRoot(name: string): RootConfig {
