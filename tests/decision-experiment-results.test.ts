@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {compareExperimentResults,ablationDelta} from '../src/decision-experiment-results.js';
+const r=(arm:any,hash='h',accuracy=.95):any=>({arm,testSetHash:hash,metrics:{total:100,answered:80,correct:76,accuracy,coverage:.8,selectiveAccuracy:.98,brier:.03,ece:.04,optionOrderFlipRate:.01},highRiskFalseAcceptRate:.001,latencyP50Ms:20,latencyP95Ms:30,memoryMb:100});
+test('ablation comparison rejects moving test sets',()=>{assert.equal(compareExperimentResults([r('outcomes','a'),r('outcomes_skills','b')]).valid,false)});
+test('result comparison evaluates every arm against promotion safety gate',()=>{const x:any=compareExperimentResults([r('outcomes'),r('outcomes_skills')]);assert.equal(x.valid,true);assert.ok(x.results.every((v:any)=>v.gate.eligible))});
+test('ablation delta reports benefits and costs without choosing a winner',()=>{const d=ablationDelta(r('outcomes','h',.9),{...r('outcomes_skills','h',.94),latencyP50Ms:25,memoryMb:130});assert.ok(d.accuracy>0);assert.equal(d.latencyP50Ms,5);assert.equal(d.memoryMb,30)});
