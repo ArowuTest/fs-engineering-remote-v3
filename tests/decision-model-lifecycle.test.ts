@@ -1,4 +1,4 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {newModelLifecycle,evaluateLifecycle} from '../src/decision-model-lifecycle.js';
 const good:any={total:1000,answered:700,correct:690,accuracy:.94,coverage:.7,selectiveAccuracy:.985,brier:.03,ece:.04,optionOrderFlipRate:.01};
 test('new models have no authority and only become low-risk eligible after all gates pass',()=>{let x=newModelLifecycle('m','t');assert.equal(x.stage,'candidate');x=evaluateLifecycle(x,good,.001);assert.equal(x.stage,'eligible_low_risk')});
-test('drift revokes eligibility into recalibration or retraining state',()=>{let x={...newModelLifecycle('m','t'),stage:'eligible_low_risk' as const};x=evaluateLifecycle(x,good,.001,{requiresRetraining:true,requiresRecalibration:true} as any);assert.equal(x.stage,'retraining_required')});
+test('drift revokes eligibility into recalibration or retraining state',()=>{let x:any={...newModelLifecycle('m','t'),stage:'eligible_low_risk'};x=evaluateLifecycle(x,good,.001,{requiresRetraining:true,requiresRecalibration:true} as any);assert.equal(x.stage,'retraining_required')});
