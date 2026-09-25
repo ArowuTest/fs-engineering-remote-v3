@@ -4,12 +4,14 @@ import { type AppConfig } from './config.js';
 import { createRemoteOperations, type RemoteOperations } from './operations.js';
 import { ProcessManager } from './processes.js';
 import { SERVICE_NAME, SERVICE_VERSION } from './version.js';
+import {budgetToolPayload} from './payload-budget.js';
 
 function text(value: unknown) {
+  const budgeted=budgetToolPayload(value);
   return {
     content: [{
       type: 'text' as const,
-      text: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+      text: typeof budgeted.value === 'string' ? budgeted.value : JSON.stringify(budgeted.value),
     }],
   };
 }
