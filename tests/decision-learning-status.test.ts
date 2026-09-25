@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {decisionLearningStatus} from '../src/decision-learning-status.js';
+test('learning status reports why training is not ready instead of forcing a run',()=>{const s=decisionLearningStatus([],[],[]);assert.equal(s.readiness.enoughExamples,false);assert.equal(s.readiness.diverseDomains,false);assert.equal(s.readiness.noBlockingContradictions,true);assert.equal(s.negative.total,0)});
