@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {engineeringDepth} from '../src/engineering-depth.js';
+test('low-risk bounded work uses fast path instead of universal council/governance',()=>{const x=engineeringDepth({risk:'low',changedFiles:1,task:'rename button label'});assert.equal(x.depth,'fast');assert.equal(x.council,false);assert.equal(x.planning,false);assert.equal(x.repeatVerification,0)});
+test('critical and destructive work retains maximum governance',()=>{const x=engineeringDepth({risk:'critical',destructive:true});assert.equal(x.depth,'critical');assert.equal(x.council,true);assert.equal(x.fullEvidenceBundle,true);assert.ok(x.repeatVerification>=2)});
