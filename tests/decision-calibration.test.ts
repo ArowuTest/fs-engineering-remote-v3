@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {fitTemperatureCalibration,calibrateConfidence,calibrationBins} from '../src/decision-calibration.js';
+test('temperature calibration reduces held-out NLL for overconfident predictions',()=>{const xs=Array.from({length:100},(_,i)=>({confidence:.95,correct:i<70})),c=fitTemperatureCalibration(xs);assert.ok(c.nllAfter<c.nllBefore);assert.ok(c.temperature>1);assert.ok(calibrateConfidence(.95,c)<.95)});
+test('calibration bins expose empirical reliability',()=>{const b=calibrationBins([{confidence:.85,correct:true},{confidence:.82,correct:false}],10).find(x=>x.count);assert.equal(b?.count,2);assert.equal(b?.accuracy,.5)});
