@@ -9,7 +9,9 @@
                     "check":  "tsc --noEmit",
                     "node:agent":  "tsx src/node-main.ts",
                     "build":  "tsc --noEmit",
-                    "validate":  "npm run check \u0026\u0026 npm test"
+                    "validate":  "npm run check \u0026\u0026 npm test",
+                    "decision:status":  "tsx scripts/decision-learning-status.mts",
+                    "decision:train":  "tsx scripts/run-decision-experiment.mts"
                 },
     "keywords":  [
 
