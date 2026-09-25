@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {captureNegative} from '../src/decision-negative-capture.js';
+const mission:any={id:'m',root:'fs',cwd:'p'},step:any={id:'s',title:'Compile service',acceptance:['build passes']};
+test('negative capture classifies source failures and keeps project identity hashed',()=>{const x=captureNegative({mission,step,evidence:[{id:'e',status:'fail',kind:'build',summary:'Type error',observedAt:'x'}] as any,work:[{id:'w',stepId:'s',kind:'engineering',status:'failed',error:'compile failed',payload:{}}] as any,outcome:'deterministic_failure',reason:'compiler failed'});assert.equal(x.failureClass,'source');assert.equal(x.trainingUse,'strong_negative');assert.equal(JSON.stringify(x).includes('fs:p'),false)});
