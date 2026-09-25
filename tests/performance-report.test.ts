@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {performanceReport,performanceBottlenecks} from '../src/performance-report.js';
+const e=(operation:string,phase:any,durationMs:number,responseBytes:number):any=>({operation,phase,durationMs,responseBytes,requestBytes:10,ok:true});
+test('performance report separates time bottlenecks from payload bottlenecks',()=>{const r=performanceReport([e('build','execution',10000,1000),e('read','tool',100,100000),e('model','model',5000,5000)]),b=performanceBottlenecks(r);assert.equal(b.dominantTimePhase,'execution');assert.equal(b.dominantPayloadPhase,'tool');assert.equal(b.largestPayloads[0].operation,'read')});
