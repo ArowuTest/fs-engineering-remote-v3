@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {majorityBaseline,experienceCellBaseline} from '../src/decision-baseline.js';
+const e=(label:string,domain='web'):any=>({experience:{domain,disciplines:['testing'],workShape:'test'},labels:[{questionId:'retry',label}]});
+test('majority baseline exposes class imbalance a learned model must beat',()=>{const r=majorityBaseline([e('true'),e('true'),e('false')],[e('true'),e('false')]);assert.equal(r.predictions.get('retry')!.label,'true');assert.equal(r.accuracy,.5)});
+test('experience-cell baseline measures value of reusable structured experience without neural inference',()=>{const r=experienceCellBaseline([e('true','web'),e('false','backend')],[e('true','web'),e('false','backend'),e('true','mobile')]);assert.equal(r.answered,2);assert.equal(r.correct,2);assert.ok(r.coverage<1)});
