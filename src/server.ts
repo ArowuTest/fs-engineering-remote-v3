@@ -6,6 +6,8 @@ import { ProcessManager } from './processes.js';
 import { SERVICE_NAME, SERVICE_VERSION } from './version.js';
 import {budgetToolPayload} from './payload-budget.js';
 import {engineeringContext} from './engineering-context.js';
+import {measurePerformance} from './performance-telemetry.js';
+import path from 'node:path';
 
 function text(value: unknown) {
   const budgeted=budgetToolPayload(value);
@@ -24,6 +26,10 @@ export function createRemoteServer(
 ): McpServer {
   const ops = operations ?? createRemoteOperations(config, processes);
   const server = new McpServer({ name: SERVICE_NAME, version: SERVICE_VERSION });
+  const performanceFile=path.join(ops.stateRoot,'performance','mcp-events.jsonl');
+  const measured=async<T>(operation:string,input:unknown,fn:()=>Promise<T>)=>measurePerformance({file:performanceFile,operation,phase:'tool',request:input},fn);
+  const originalRegister=(server.registerTool as any).bind(server);
+  (server as any).registerTool=(name:string,config:any,handler:any)=>originalRegister(name,config,async(input:any,extra:any)=>measured(name,input,()=>handler(input,extra)));
 
   server.registerTool('health', {
     title: 'FS Remote health',

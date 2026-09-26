@@ -36,6 +36,7 @@ function psQuote(value: string): string {
 }
 
 export class RemoteOperations {
+  readonly stateRoot:string;
   private readonly skills: SkillCatalog;
   private readonly browser = new BrowserManager();
   private readonly database = new DatabaseManager();
@@ -55,6 +56,7 @@ export class RemoteOperations {
     private readonly diagnostics = new RuntimeDiagnostics(config),
     private readonly workspaceId?: string,
   ) {
+    this.stateRoot=this.runtime.stateRoot;
     this.skills = skills ?? new SkillCatalog(defaultSkillsRoot());
     this.missions = new MissionManager(path.join(this.runtime.stateRoot,'missions'), workspaceId);
     this.workers = new WorkerQueue(path.join(this.runtime.stateRoot,'work-queue'),120000,workspaceId);
