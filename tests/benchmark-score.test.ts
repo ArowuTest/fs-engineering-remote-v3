@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {benchmarkScore} from '../src/benchmark-score.js';
+const e=(durationMs:number,responseBytes:number):any=>({phase:'tool',durationMs,requestBytes:10,responseBytes,ok:true});
+test('benchmark rewards correct accepted work while penalizing excess time payload calls and intervention',()=>{const lean=benchmarkScore([e(100,1000)],{correct:true,accepted:true,manualInterventions:0}),chatty=benchmarkScore(Array.from({length:50},()=>e(1000,100000)),{correct:true,accepted:true,manualInterventions:2});assert.ok(lean.score>chatty.score);assert.equal(benchmarkScore([e(1,1)],{correct:false,accepted:false,manualInterventions:0}).score,0)});
