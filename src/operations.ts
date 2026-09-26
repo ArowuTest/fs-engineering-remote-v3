@@ -16,6 +16,7 @@ import { runtimeIdentity } from './runtime.js';
 import { HandoffStore } from './handoff.js';
 import { MissionOrchestrator } from './orchestrator.js';
 import { OpenSandboxProvider } from './sandbox.js';
+import { summarizeOutput } from './output-summary.js';
 import { OperatorStatus, type RiskItem } from './operator-status.js';
 import { candidateSpec, evaluatePromotion, type PromotionCandidate, type PromotionSample, type PromotionPolicy } from './promotion.js';
 import { budgetGate, mergeQueue, type AutonomousBudget, type Usage, type MergeCandidate } from './governance.js';
@@ -413,7 +414,7 @@ export class RemoteOperations {
 
   async listExecutionSessions() { return this.processes.listSessions(); }
 
-  async readExecutionSession(sessionId: string, cursor = 0, maxRecords = 200) { return this.processes.readSession(sessionId, cursor, maxRecords); }
+  async readExecutionSession(sessionId: string, cursor = 0, maxRecords = 50) { return this.processes.readSession(sessionId, cursor, Math.min(maxRecords,200)); }
 
   async writeExecutionSession(sessionId:string,input:string,appendNewline=false){return this.processes.writeSession(sessionId,input,appendNewline);}
 
@@ -459,6 +460,8 @@ export class RemoteOperations {
     const root=this.getRoot(rootName);const wd=resolveInRoot(root,cwd);let resolved=command?.trim()??'';if(!resolved){const pkgPath=path.join(wd,'package.json');if(!existsSync(pkgPath))throw new Error(`No command supplied and no package.json found for ${kind}.`);const pkg=JSON.parse(await fs.readFile(pkgPath,'utf8'));const aliases=kind==='typecheck'?['typecheck','check']:kind==='check'?['check','typecheck']: [kind];const script=aliases.find(x=>typeof pkg.scripts?.[x]==='string');if(!script)throw new Error(`No repository script found for ${kind}; supply an explicit command.`);resolved=`npm.cmd run ${script}`;}
     const startedAt=new Date().toISOString(),start=Date.now();const result=await this.processes.run(resolved,wd,Math.min(timeoutMs??this.config.commandTimeoutMs,15*60*1000));const status=result.exitCode===0&&!result.timedOut?'passed':result.timedOut?'timed_out':'failed';const payload={schemaVersion:'fs-remote.engineering-check.v1',kind,command:resolved,status,exitCode:result.exitCode,timedOut:result.timedOut,durationMs:Date.now()-start,startedAt,completedAt:new Date().toISOString(),stdoutTail:result.stdout.slice(-20000),stderrTail:result.stderr.slice(-12000)};await this.appendAgentEvent(rootName,cwd,{type:'ENGINEERING_CHECK',kind,status,command:resolved,exitCode:result.exitCode,timedOut:result.timedOut,durationMs:payload.durationMs});await this.trySaveRecoveryCheckpoint(rootName,cwd,'engineering_check',{kind,status,command:resolved,exitCode:result.exitCode,timedOut:result.timedOut});return payload;
   }
+
+  async runEngineeringCheckSummary(rootName:string,cwd:string,kind:'test'|'lint'|'build'|'typecheck'|'check',command?:string,timeoutMs?:number){const full=await this.runEngineeringCheck(rootName,cwd,kind,command,timeoutMs);return{schemaVersion:'fs-remote.engineering-check-summary.v1',kind:full.kind,command:full.command,status:full.status,exitCode:full.exitCode,timedOut:full.timedOut,durationMs:full.durationMs,startedAt:full.startedAt,completedAt:full.completedAt,stdout:summarizeOutput(full.stdoutTail),stderr:summarizeOutput(full.stderrTail)};}
 
   async dockerProjectStatus(rootName:string,cwd='.'){
     const cfg=await this.projectLifecycleConfig(rootName,cwd);if(!cfg.composeFile)return{schemaVersion:'fs-remote.docker-status.v1',configured:cfg.configured,compose:false,services:[],reason:'No Compose file detected.'};const fileArg=`-f ${psQuote(cfg.composeFile)}`;const ps=await this.processes.run(`docker compose ${fileArg} ps --all --format json`,cfg.workingDirectory,this.config.commandTimeoutMs);if(ps.exitCode!==0)return{schemaVersion:'fs-remote.docker-status.v1',configured:cfg.configured,compose:true,composeFile:cfg.composeFile,healthy:false,error:ps.stderr||ps.stdout};const services=[] as any[];for(const line of ps.stdout.split(/\r?\n/).filter(Boolean)){try{const x=JSON.parse(line);services.push({service:x.Service??x.Name,name:x.Name,state:x.State,status:x.Status,health:x.Health??null,ports:x.Ports??x.Publishers??null});}catch{services.push({raw:line});}}return{schemaVersion:'fs-remote.docker-status.v1',configured:cfg.configured,compose:true,composeFile:cfg.composeFile,healthy:services.every(x=>!x.state||String(x.state).toLowerCase()==='running'),services};

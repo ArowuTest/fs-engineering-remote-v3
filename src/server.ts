@@ -5,6 +5,7 @@ import { createRemoteOperations, type RemoteOperations } from './operations.js';
 import { ProcessManager } from './processes.js';
 import { SERVICE_NAME, SERVICE_VERSION } from './version.js';
 import {budgetToolPayload} from './payload-budget.js';
+import {engineeringContext} from './engineering-context.js';
 
 function text(value: unknown) {
   const budgeted=budgetToolPayload(value);
@@ -263,7 +264,7 @@ export function createRemoteServer(
   }, async () => text(await ops.listExecutionSessions()));
   server.registerTool('exec_poll', {
     title: 'Poll durable execution session', description: 'Read persisted stdout/stderr records from a stable execution session ID using a monotonic record cursor.',
-    inputSchema: z.object({ sessionId:z.string().min(1), cursor:z.number().int().min(0).default(0), maxRecords:z.number().int().min(1).max(1000).default(200) }), annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: z.object({ sessionId:z.string().min(1), cursor:z.number().int().min(0).default(0), maxRecords:z.number().int().min(1).max(200).default(50) }), annotations: { readOnlyHint: true, openWorldHint: false },
   }, async ({sessionId,cursor,maxRecords}) => text(await ops.readExecutionSession(sessionId,cursor,maxRecords)));
   server.registerTool('exec_write', {
     title:'Write to execution session', description:'Write bounded stdin to a currently live execution session. Does not revive interrupted sessions.',
@@ -277,6 +278,7 @@ export function createRemoteServer(
   server.registerTool('git_worktree_create',{title:'Create isolated Git worktree',description:'Create a new child worktree and new branch from a verified base revision. Never reuses an existing branch or target path.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),path:z.string().min(1),branch:z.string().min(1),base:z.string().default('HEAD')}),annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false}},async({root,cwd,path,branch,base})=>text(await ops.createWorktree(root,cwd,path,branch,base)));
   server.registerTool('git_worktree_remove',{title:'Remove clean Git worktree',description:'Remove a registered worktree only when it is clean. Does not delete its branch.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),path:z.string().min(1)}),annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:false}},async({root,cwd,path})=>text(await ops.removeWorktree(root,cwd,path)));
   server.registerTool('search_repository',{title:'Search repository text',description:'Case-insensitive bounded text search across governed Git tracked/untracked text files without returning the whole repository.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),query:z.string().min(1),limit:z.number().int().min(1).max(500).default(100)}),annotations:{readOnlyHint:true,openWorldHint:false}},async({root,cwd,query,limit})=>text(await ops.searchRepository(root,cwd,query,limit)));
+  server.registerTool('engineering_context',{title:'Get compact engineering context',description:'Return a byte-conscious combined repository snapshot: Git state, bounded file map, detected build scripts, applicable instructions and recommended checks. Prefer this before multiple broad discovery calls.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),fileLimit:z.number().int().min(20).max(300).default(120)}),annotations:{readOnlyHint:true,openWorldHint:false}},async({root,cwd,fileLimit})=>text(await engineeringContext(ops,root,cwd,{fileLimit})));
   server.registerTool('repository_map',{title:'Map repository files',description:'Return a bounded Git-aware repository file map and top-level areas.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),limit:z.number().int().min(1).max(5000).default(1000)}),annotations:{readOnlyHint:true,openWorldHint:false}},async({root,cwd,limit})=>text(await ops.repositoryMap(root,cwd,limit)));
   server.registerTool('changed_since',{title:'List files changed since revision',description:'Return structured Git name-status changes since a verified revision.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),revision:z.string().min(1)}),annotations:{readOnlyHint:true,openWorldHint:false}},async({root,cwd,revision})=>text(await ops.changedSince(root,cwd,revision)));
   server.registerTool('applicable_instructions',{title:'Resolve repository instructions',description:'Return hierarchical AGENTS.md and .agent/instructions.md files applicable to a repository path, ordered from broadest to most specific.',inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),path:z.string().default('.')}),annotations:{readOnlyHint:true,openWorldHint:false}},async({root,cwd,path})=>text(await ops.applicableInstructions(root,cwd,path)));

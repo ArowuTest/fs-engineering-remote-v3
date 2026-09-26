@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {summarizeOutput,summarizeRun} from '../src/output-summary.js';
+test('output summary preserves diagnostic signals while bounding what a harness needs to inspect',()=>{const text=['start',...Array.from({length:100},(_,i)=>`line ${i}`),'ERROR compile failed','tail'].join('\n'),s=summarizeOutput(text,{headLines:2,tailLines:3,maxSignalLines:5,maxBytes:100});assert.equal(s.truncated,true);assert.ok(s.signals.some(x=>x.includes('ERROR')));assert.match(s.sha256,/^[0-9a-f]{64}$/)});
+test('run summary separates stdout and stderr diagnostics',()=>{const s=summarizeRun({exitCode:1,timedOut:false,stdout:'ok',stderr:'fatal error'});assert.equal(s.exitCode,1);assert.ok(s.stderr.signals.length)});
