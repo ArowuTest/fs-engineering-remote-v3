@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {interCallGaps,gapSummary} from '../src/performance-gaps.js';
+const e=(operation:string,at:string,durationMs:number):any=>({operation,at,durationMs,requestBytes:10,responseBytes:100,phase:'tool',ok:true});
+test('inter-call analysis separates FS handler time from time outside the server',()=>{const xs=[e('read_file','2026-01-01T00:00:00.000Z',100),e('search_text','2026-01-01T00:00:02.100Z',100),e('git_status','2026-01-01T00:00:05.200Z',50)],g=interCallGaps(xs);assert.equal(g[0].gapMs,2000);assert.equal(g[1].gapMs,3000);const s=gapSummary(xs);assert.equal(s.totalGapMs,5000);assert.equal(s.largest[0].gapMs,3000)});
