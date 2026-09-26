@@ -11,7 +11,8 @@
                     "build":  "tsc --noEmit",
                     "validate":  "npm run check \u0026\u0026 npm test",
                     "decision:status":  "tsx scripts/decision-learning-status.mts",
-                    "decision:train":  "tsx scripts/run-decision-experiment.mts"
+                    "decision:train":  "tsx scripts/run-decision-experiment.mts",
+                    "perf:report":  "tsx scripts/performance-report.mts"
                 },
     "keywords":  [
 

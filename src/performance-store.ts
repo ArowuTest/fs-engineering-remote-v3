@@ -1,0 +1,2 @@
+import fs from 'node:fs/promises';import type {PerformanceEvent} from './performance-telemetry.js';
+export async function readPerformanceEvents(file:string,options:{since?:string;limit?:number}={}){try{const body=await fs.readFile(file,'utf8'),since=options.since?Date.parse(options.since):0,limit=Math.max(1,Math.min(options.limit??5000,20000)),rows=body.split(/\r?\n/).filter(Boolean).map(x=>JSON.parse(x) as PerformanceEvent).filter(x=>Date.parse(x.at)>=since);return rows.slice(-limit)}catch{return[]}}

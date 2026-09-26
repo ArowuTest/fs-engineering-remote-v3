@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {performanceWaterfall,repeatedOperations} from '../src/performance-waterfall.js';
+const e=(operation:string,at:string,durationMs=10):any=>({operation,phase:'tool',at,durationMs,requestBytes:1,responseBytes:2,ok:true});
+test('waterfall orders events and repeated-operation report exposes chatty patterns',()=>{const xs=[e('read_file','2026-01-01T00:00:02Z'),e('read_file','2026-01-01T00:00:01Z'),e('git_status','2026-01-01T00:00:03Z')],w=performanceWaterfall(xs),r=repeatedOperations(xs);assert.equal(w[0].operation,'read_file');assert.ok(w[1].startOffsetMs>=w[0].startOffsetMs);assert.equal(r[0].calls,2);assert.equal(r[0].key,'tool:read_file')});
