@@ -1,0 +1,1 @@
+import path from 'node:path';import {readBenchmarkRuns,benchmarkAggregate} from '../src/benchmark-run-store.js';const file=path.resolve(process.argv[2]??'.agent-runtime/performance/benchmark-runs.jsonl'),runs=await readBenchmarkRuns(file);console.log(JSON.stringify({runs:runs.length,aggregate:benchmarkAggregate(runs)},null,2));

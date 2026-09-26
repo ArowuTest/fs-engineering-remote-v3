@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {storedBenchmarkRun,benchmarkAggregate} from '../src/benchmark-run-store.js';
+const r=(repeat:number,wallMs:number,warmup=false)=>storedBenchmarkRun({system:'v3',harness:'h',model:'m',benchmarkId:'bounded-edit',correct:true,accepted:true,wallMs,handlerMs:10,outsideMs:wallMs-10,toolCalls:5,requestBytes:10,responseBytes:100,manualInterventions:0,fixtureId:'f',repeat,warmup});
+test('benchmark aggregate excludes warmup and reports repeated-run medians',()=>{const a=benchmarkAggregate([r(0,9999,true),r(1,100),r(2,300),r(3,200)])[0];assert.equal(a.runs,3);assert.equal(a.medianWallMs,200);assert.equal(a.correctRate,1)});
