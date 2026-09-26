@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {performanceRecommendations} from '../src/performance-recommendations.js';
+test('recommendations identify oversized payloads and excessive round trips independently',()=>{const r:any={events:40,totalDurationMs:10000,totalResponseBytes:4_000_000,phases:{tool:{calls:35,durationMs:1000},execution:{calls:1,durationMs:5000}}},xs=performanceRecommendations(r);assert.ok(xs.some(x=>x.kind==='payload'));assert.ok(xs.some(x=>x.kind==='round_trips'));assert.ok(xs.some(x=>x.kind==='execution'))});
