@@ -1,0 +1,1 @@
+import path from 'node:path';import {createBenchmarkFixture} from '../src/benchmark-fixture.js';const root=path.resolve(process.argv[2]??'.agent-runtime/performance-fixture');console.log(JSON.stringify(await createBenchmarkFixture(root),null,2));
