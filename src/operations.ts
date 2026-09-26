@@ -211,12 +211,14 @@ export class RemoteOperations {
     const target = assertReadablePath(root, relativePath);
     const content = await fs.readFile(target, 'utf8');
     const lines = content.split(/\r?\n/);
+    const selected=lines.slice(offset, offset + length).join('\n');
     return {
       path: relativePath,
       offset,
       length: Math.min(length, Math.max(0, lines.length - offset)),
       totalLines: lines.length,
-      content: lines.slice(offset, offset + length).join('\n'),
+      sha256: crypto.createHash('sha256').update(selected).digest('hex'),
+      content: selected,
     };
   }
 
