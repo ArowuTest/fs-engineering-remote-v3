@@ -41,9 +41,11 @@ function commandEnvironment(): NodeJS.ProcessEnv {
 }
 
 export function resolveCommandShell(shell: string, platform = process.platform, env = process.env): string {
-  if (platform !== 'win32' || shell.toLowerCase() !== 'powershell.exe') return shell;
-  const candidates=[env.SystemRoot,env.SYSTEMROOT,'C:\\Windows'].filter((x):x is string=>Boolean(x)).map(x=>`${x}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`);
-  return candidates.find(x=>fs.existsSync(x))??'powershell.exe';
+  if (platform !== 'win32') return shell;
+  // Bare executable names are more robust under Node spawn than absolute Windows
+  // paths in long-lived/watchdog environments, while commandEnvironment supplies COMSPEC.
+  if (shell.toLowerCase()==='powershell.exe') return 'powershell.exe';
+  return shell;
 }
 
 function shellArgs(shell: string, command: string, platform = process.platform): string[] {
