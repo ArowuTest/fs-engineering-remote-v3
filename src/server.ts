@@ -10,6 +10,7 @@ import {measurePerformance} from './performance-telemetry.js';
 import path from 'node:path';
 import {BenchmarkSessionManager} from './benchmark-session-manager.js';
 import {harnessGuidance} from './harness-guidance.js';
+import {runtimeIdentity} from './runtime-identity.js';
 
 function text(value: unknown) {
   const budgeted=budgetToolPayload(value);
@@ -33,6 +34,8 @@ export function createRemoteServer(
   const benchmarks=new BenchmarkSessionManager(ops.stateRoot);
   const originalRegister=(server.registerTool as any).bind(server);
   (server as any).registerTool=(name:string,config:any,handler:any)=>originalRegister(name,config,async(input:any,extra:any)=>measured(name,input,()=>handler(input,extra)));
+
+  server.registerTool('runtime_identity',{title:'Identify running FS service build',description:'Return process start time, service version and Git commit so clients can detect a stale runtime after code changes.',inputSchema:z.object({}),annotations:{readOnlyHint:true,openWorldHint:false}},async()=>text(await runtimeIdentity({serviceVersion:SERVICE_VERSION,stateRoot:ops.stateRoot})));
 
   server.registerTool('harness_guidance',{title:'Get efficient engineering workflow guidance',description:'Return risk-adaptive tool-call, context and stopping guidance for the current engineering task. Use this to avoid unnecessary reads, polling, review and oversized context.',inputSchema:z.object({risk:z.enum(['low','medium','high','critical']),task:z.string(),changedFiles:z.number().int().min(0).optional(),destructive:z.boolean().optional(),sensitive:z.boolean().optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async(input)=>text(harnessGuidance(input)));
 
