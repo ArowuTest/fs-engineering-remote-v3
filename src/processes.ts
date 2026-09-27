@@ -42,8 +42,8 @@ function commandEnvironment(): NodeJS.ProcessEnv {
 
 export function resolveCommandShell(shell: string, platform = process.platform, env = process.env): string {
   if (platform !== 'win32' || shell.toLowerCase() !== 'powershell.exe') return shell;
-  const systemRoot = env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows';
-  return `${systemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+  const candidates=[env.SystemRoot,env.SYSTEMROOT,'C:\\Windows'].filter((x):x is string=>Boolean(x)).map(x=>`${x}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`);
+  return candidates.find(x=>fs.existsSync(x))??'powershell.exe';
 }
 
 function shellArgs(shell: string, command: string, platform = process.platform): string[] {
