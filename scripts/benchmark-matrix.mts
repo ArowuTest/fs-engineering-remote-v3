@@ -1,0 +1,1 @@
+import {benchmarkMatrix,matrixSummary} from '../src/benchmark-matrix.js';const harnesses=(process.env.FS_BENCH_HARNESSES??'ChatGPT').split(',').filter(Boolean),models=(process.env.FS_BENCH_MODELS??'current').split(',').filter(Boolean),rows=benchmarkMatrix({harnesses,models});console.log(JSON.stringify({summary:matrixSummary(rows),rows},null,2));
