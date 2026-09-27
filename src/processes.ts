@@ -37,7 +37,7 @@ export interface RunResult {
 
 function commandEnvironment(): NodeJS.ProcessEnv {
   const comspec = process.env.ComSpec ?? process.env.COMSPEC ?? 'C:\\Windows\\System32\\cmd.exe';
-  const env={...process.env,ComSpec:comspec,COMSPEC:comspec};
+  const env:NodeJS.ProcessEnv={...process.env,ComSpec:comspec,COMSPEC:comspec};
   if(process.platform==='win32'){const systemRoot=process.env.SystemRoot??process.env.SYSTEMROOT??'C:\\Windows',required=[`${systemRoot}\\System32\\WindowsPowerShell\\v1.0`,`${systemRoot}\\System32`],current=env.Path??env.PATH??'',parts=current.split(';').filter(Boolean),lower=new Set(parts.map(x=>x.toLowerCase()));for(const p of required)if(!lower.has(p.toLowerCase()))parts.unshift(p);env.Path=parts.join(';');env.PATH=env.Path;}
   return env;
 }
