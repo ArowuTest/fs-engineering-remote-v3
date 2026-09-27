@@ -1,4 +1,4 @@
-﻿import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -44,18 +44,16 @@ function commandEnvironment(): NodeJS.ProcessEnv {
 
 export function resolveCommandShell(shell: string, platform = process.platform, env = process.env): string {
   if (platform !== 'win32') return shell;
-  // Bare executable names are more robust under Node spawn than absolute Windows
-  // paths in long-lived/watchdog environments, while commandEnvironment supplies COMSPEC.
   if (shell.toLowerCase()==='powershell.exe') return 'powershell.exe';
   return shell;
 }
 
 function shellArgs(shell: string, command: string, platform = process.platform): string[] {
   const name = shell.toLowerCase();
-  if (platform === 'win32' || name.includes('powershell') || name.includes('pwsh')) return ['-NoProfile', '-Command', command];
+  if (platform === 'win32' && (name.endsWith('cmd.exe') || name === 'cmd')) return ['/d', '/s', '/c', command];
+  if (name.includes('powershell') || name.includes('pwsh')) return ['-NoProfile', '-Command', command];
   return ['-lc', command];
 }
-
 export class ProcessManager {
   private readonly jobs = new Map<number, Job>();
   private readonly sessions = new Map<string, Job>();
