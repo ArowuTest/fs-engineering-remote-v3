@@ -9,6 +9,7 @@ import {engineeringContext} from './engineering-context.js';
 import {measurePerformance} from './performance-telemetry.js';
 import path from 'node:path';
 import {BenchmarkSessionManager} from './benchmark-session-manager.js';
+import {harnessGuidance} from './harness-guidance.js';
 
 function text(value: unknown) {
   const budgeted=budgetToolPayload(value);
@@ -32,6 +33,8 @@ export function createRemoteServer(
   const benchmarks=new BenchmarkSessionManager(ops.stateRoot);
   const originalRegister=(server.registerTool as any).bind(server);
   (server as any).registerTool=(name:string,config:any,handler:any)=>originalRegister(name,config,async(input:any,extra:any)=>measured(name,input,()=>handler(input,extra)));
+
+  server.registerTool('harness_guidance',{title:'Get efficient engineering workflow guidance',description:'Return risk-adaptive tool-call, context and stopping guidance for the current engineering task. Use this to avoid unnecessary reads, polling, review and oversized context.',inputSchema:z.object({risk:z.enum(['low','medium','high','critical']),task:z.string(),changedFiles:z.number().int().min(0).optional(),destructive:z.boolean().optional(),sensitive:z.boolean().optional()}),annotations:{readOnlyHint:true,openWorldHint:false}},async(input)=>text(harnessGuidance(input)));
 
   server.registerTool('benchmark_session',{title:'Control performance benchmark session',description:'Start or finish a governed performance benchmark so actual harness/model MCP behaviour is measured automatically.',inputSchema:z.object({action:z.enum(['start','finish']),sessionId:z.string().optional(),benchmarkId:z.string().optional(),harness:z.string().optional(),model:z.string().optional(),fixtureRoot:z.string().optional(),fixtureId:z.string().optional(),repeat:z.number().int().min(0).default(0),warmup:z.boolean().default(false),manualInterventions:z.number().int().min(0).default(0),notes:z.string().optional()}),annotations:{readOnlyHint:false,openWorldHint:false}},async(input)=>{if(input.action==='start'){if(!input.benchmarkId||!input.harness||!input.model||!input.fixtureRoot||!input.fixtureId)throw new Error('benchmarkId, harness, model, fixtureRoot and fixtureId are required to start.');return text(await benchmarks.start({benchmarkId:input.benchmarkId,harness:input.harness,model:input.model,fixtureRoot:input.fixtureRoot,fixtureId:input.fixtureId,repeat:input.repeat,warmup:input.warmup,notes:input.notes}))}if(!input.sessionId)throw new Error('sessionId is required to finish.');return text(await benchmarks.finish(input.sessionId,input.manualInterventions))});
 
