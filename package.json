@@ -14,6 +14,7 @@
                     "decision:status":  "tsx scripts/decision-learning-status.mts",
                     "decision:train":  "tsx scripts/run-decision-experiment.mts",
                     "perf:report":  "tsx scripts/performance-report.mts",
+                    "perf:regression":  "tsx scripts/benchmark-regression-report.mts",
                     "perf:claude:startup":  "tsx scripts/benchmark-claude-startup.mts",
                     "perf:claude:bounded":  "tsx scripts/benchmark-claude-bounded.mts",
                     "perf:claude:warm":  "tsx scripts/benchmark-claude-warm-stream.mts",
