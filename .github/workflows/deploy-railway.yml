@@ -18,7 +18,7 @@ jobs:
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: c6113f7b-af28-408f-b32a-0fe1b3911853
-      RAILWAY_ENVIRONMENT: production
+      RAILWAY_TARGET_ENVIRONMENT: production
       FS_PUBLIC_BASE_URL: https://control-plane-production-d25c.up.railway.app
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       RAILWAY_CLI_VERSION: 5.63.0
@@ -49,24 +49,24 @@ jobs:
           npm run validate
       - name: Link Railway production project
         if: steps.credentials.outputs.configured == 'true'
-        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT"
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_TARGET_ENVIRONMENT"
       - name: Verify required production variables without printing values
         if: steps.credentials.outputs.configured == 'true'
         shell: bash
         run: |
-          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service control-plane --environment "$RAILWAY_ENVIRONMENT" --json \
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service control-plane --environment "$RAILWAY_TARGET_ENVIRONMENT" --json \
             | node --import tsx scripts/railway-variable-preflight.mts control-plane DATABASE_URL,FS_REMOTE_ACTIONS_SECRET,FS_REMOTE_ENDPOINT_SECRET,FS_REMOTE_ENVIRONMENT,FS_REMOTE_HOSTED,FS_REMOTE_INSTANCE_ID,FS_REMOTE_PUBLIC_BASE_URL,FS_REMOTE_STATE_ROOT
-          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --json \
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service autonomous-worker --environment "$RAILWAY_TARGET_ENVIRONMENT" --json \
             | node --import tsx scripts/railway-variable-preflight.mts autonomous-worker DATABASE_URL,FS_REMOTE_ACTIONS_SECRET,FS_REMOTE_ENDPOINT_SECRET,FS_REMOTE_ENVIRONMENT,FS_REMOTE_INSTANCE_ID,FS_REMOTE_STATE_ROOT,GITHUB_TOKEN,OPENROUTER_API_KEY
       - name: Stamp exact revision on both app services
         if: steps.credentials.outputs.configured == 'true'
         shell: bash
         run: |
-          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service control-plane --environment "$RAILWAY_ENVIRONMENT" --skip-deploys >/dev/null
-          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --skip-deploys >/dev/null
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service control-plane --environment "$RAILWAY_TARGET_ENVIRONMENT" --skip-deploys >/dev/null
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service autonomous-worker --environment "$RAILWAY_TARGET_ENVIRONMENT" --skip-deploys >/dev/null
       - name: Deploy control plane under existing Railway health policy
         if: steps.credentials.outputs.configured == 'true'
-        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service control-plane --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $DEPLOY_SHA control-plane"
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service control-plane --environment "$RAILWAY_TARGET_ENVIRONMENT" --message "GitHub $DEPLOY_SHA control-plane"
       - name: Verify new control plane fail-closed readiness and exact revision
         if: steps.credentials.outputs.configured == 'true'
         run: node --import tsx scripts/railway-ready-check.mts "$FS_PUBLIC_BASE_URL" "$DEPLOY_SHA"
@@ -84,12 +84,12 @@ jobs:
         run: node --import tsx scripts/railway-ready-check.mts "$FS_PUBLIC_BASE_URL" "$DEPLOY_SHA"
       - name: Deploy autonomous worker from the same revision
         if: steps.credentials.outputs.configured == 'true'
-        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $DEPLOY_SHA autonomous-worker"
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service autonomous-worker --environment "$RAILWAY_TARGET_ENVIRONMENT" --message "GitHub $DEPLOY_SHA autonomous-worker"
       - name: Verify autonomous worker deployment revision
         if: steps.credentials.outputs.configured == 'true'
         shell: bash
         run: |
-          npx -y @railway/cli@${RAILWAY_CLI_VERSION} deployment list --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --limit 1 --json \
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} deployment list --service autonomous-worker --environment "$RAILWAY_TARGET_ENVIRONMENT" --limit 1 --json \
             | node --import tsx scripts/railway-deployment-check.mts "$DEPLOY_SHA"
       - name: Verify Railway IaC converged
         if: steps.credentials.outputs.configured == 'true'
