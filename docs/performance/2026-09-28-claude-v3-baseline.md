@@ -94,6 +94,24 @@ Warm process reuse reduced median end-to-end time by about 43% and cut the pre-f
 
 One measured warm run had an FS-handler outlier: `engineering_context` took 5.705 s and `run_engineering_check` 6.811 s, while the other three warm-profile runs were roughly 0.73–0.84 s and 1.95–1.97 s respectively. The medians above are robust to that single run, but the variance should remain visible and be investigated separately rather than attributed to Claude process reuse.
 
+### Confirmed live V3 bounded-edit baseline after clean restart
+
+After reconciling the execution-node readiness work and restarting the normal V3 runtime on port 8766 from a clean committed tree, the deterministic bounded-edit benchmark was rerun with one warm-up plus **five measured repetitions**. All five measured runs were independently accepted.
+
+Measured wall times:
+
+- 2,452.810 ms
+- 2,478.920 ms
+- 2,481.366 ms
+- 2,458.960 ms
+- 2,446.048 ms
+
+Median measured wall time: **2,458.960 ms**.
+
+Every measured run used exactly four calls and returned about 2.45 KB. Operation timing was tightly clustered: `engineering_context` roughly 0.65–0.72 s, `read_file` roughly 0.03–0.05 s, `patch_file` roughly 0.48–0.51 s, and `run_engineering_check` roughly 1.24–1.27 s.
+
+This five-run stable sample disproves the earlier provisional ~8.2 s direct-runtime slowdown as a persistent code or state regression. The earlier slow batch is best treated as transient host/runtime contention. Regression detection now requires stronger evidence before confirming a performance regression.
+
 ## Windows Git-inspection tail-latency finding
 
 A later direct-control regression showed the accepted bounded-edit median rising from 4,889 ms to 8,208 ms, with handler time rising from 3,598 ms to 6,177 ms. Command-level instrumentation localized intermittent ~5-second stalls to Git command execution during recovery/repository inspection rather than to process spawn itself.
