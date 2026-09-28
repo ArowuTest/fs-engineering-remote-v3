@@ -40,7 +40,7 @@ Required autonomous-worker variables:
 
 Optional product features may require additional variables such as `FS_HOSTED_ENGINEERING_SECRET`, `FS_PROVIDER_SECRET_KEY`, OAuth client settings, `FS_HOSTED_GIT_REPOSITORIES` for the hosted Git allow-list, and bootstrap-owner variables. These are feature-specific and should not be invented during deployment; configure them only when the corresponding capability is intentionally enabled.
 
-`FS_PUBLIC_BASE_URL` is **not** a Railway runtime variable. It is a GitHub Actions secret used by the deployment workflow to verify the public control-plane endpoint after rollout. The runtime variable is `FS_REMOTE_PUBLIC_BASE_URL`.
+`FS_PUBLIC_BASE_URL` is **not** a Railway runtime variable. It is non-secret deployment configuration used by the GitHub Actions workflow to verify the public control-plane endpoint after rollout; it is committed in the workflow alongside the non-secret Railway project ID and environment name. Only `RAILWAY_TOKEN` is required as a GitHub Actions secret for Railway authentication. The runtime variable is `FS_REMOTE_PUBLIC_BASE_URL`.
 
 ## Current namespace caveat
 

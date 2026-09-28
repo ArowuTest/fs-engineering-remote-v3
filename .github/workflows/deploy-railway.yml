@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
-      FS_PUBLIC_BASE_URL: ${{ secrets.FS_PUBLIC_BASE_URL }}
+      RAILWAY_PROJECT_ID: c6113f7b-af28-408f-b32a-0fe1b3911853
+      RAILWAY_ENVIRONMENT: production
+      FS_PUBLIC_BASE_URL: https://control-plane-production-d25c.up.railway.app
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       RAILWAY_CLI_VERSION: 5.63.0
     steps:
@@ -35,11 +35,8 @@ jobs:
         shell: bash
         run: |
           test -n "$RAILWAY_TOKEN"
-          test -n "$RAILWAY_PROJECT_ID"
-          test -n "$RAILWAY_ENVIRONMENT"
-          test -n "$FS_PUBLIC_BASE_URL"
           test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
-          test "$(git branch --show-current)" = "main"
+          test "${{ github.event.workflow_run.head_branch || github.ref_name }}" = "main"
       - name: Install and validate verified revision
         run: |
           npm ci
