@@ -16,6 +16,7 @@ import { registerAuthRoutes } from './auth-http.js';
 import { registerPortal } from './portal.js';
 import { registerUserPlatformRoutes } from './user-platform-http.js';
 import { registerOAuthRoutes } from './oauth-http.js';
+import { deploymentIdentity } from './deployment-identity.js';
 
 export function buildHttpApp(config: AppConfig): FastifyInstance {
   const processes = new ProcessManager({
@@ -42,11 +43,13 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   app.get('/healthz', async () => {
     const database = await databaseHealth();
     const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
+    const deployment = deploymentIdentity();
     return {
       ok: database.healthy || (!durableRequired && !database.configured),
-      service: 'fs-engineering-remote-v3',
-      version: '3.0.0-dev',
-      environment: process.env.FS_REMOTE_ENVIRONMENT ?? 'development',
+      service: deployment.service,
+      version: deployment.serviceVersion,
+      environment: deployment.environment,
+      deployment,
       roots: config.roots.length,
       durableRequired,
       database,
@@ -56,7 +59,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
     const database = await databaseHealth();
     const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
     const state = readiness({database:{configured:database.configured,healthy:database.healthy},durableRequired});
-    return reply.code(state.ready?200:503).send(state);
+    return reply.code(state.ready?200:503).send({...state,deployment:deploymentIdentity()});
   });
   registerActionsRoutes(app, config, operations, processes);
   registerNodeRoutes(app, config);

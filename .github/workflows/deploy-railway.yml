@@ -11,44 +11,76 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
       RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
       FS_PUBLIC_BASE_URL: ${{ secrets.FS_PUBLIC_BASE_URL }}
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      RAILWAY_CLI_VERSION: 5.63.0
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - name: Check deployment credentials
-        id: credentials
         shell: bash
         run: |
-          if [[ -n "$RAILWAY_TOKEN" && -n "$RAILWAY_PROJECT_ID" && -n "$RAILWAY_SERVICE" && -n "$RAILWAY_ENVIRONMENT" && -n "$FS_PUBLIC_BASE_URL" ]]; then
-            echo 'configured=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'configured=false' >> "$GITHUB_OUTPUT"
-            echo 'Railway deployment skipped: configure RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_SERVICE, RAILWAY_ENVIRONMENT and FS_PUBLIC_BASE_URL repository secrets.'
-          fi
-      - name: Deploy verified revision
-        if: steps.credentials.outputs.configured == 'true'
-        run: npx -y @railway/cli up --ci --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE" --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $GITHUB_SHA"
-      - name: Verify fail-closed readiness
-        if: steps.credentials.outputs.configured == 'true'
+          test -n "$RAILWAY_TOKEN"
+          test -n "$RAILWAY_PROJECT_ID"
+          test -n "$RAILWAY_ENVIRONMENT"
+          test -n "$FS_PUBLIC_BASE_URL"
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+          test "$(git branch --show-current)" = "main"
+      - name: Install and validate verified revision
+        run: |
+          npm ci
+          npm run validate
+      - name: Link Railway production project
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT"
+      - name: Verify required production variables without printing values
         shell: bash
         run: |
-          base="${FS_PUBLIC_BASE_URL%/}"
-          for attempt in $(seq 1 30); do
-            code=$(curl -sS -o ready.json -w '%{http_code}' --max-time 10 "$base/readyz" || true)
-            if [[ "$code" == '200' ]]; then
-              cat ready.json
-              exit 0
-            fi
-            echo "readyz attempt $attempt returned $code"
-            sleep 10
-          done
-          echo 'Deployment never reached /readyz=200.' >&2
-          exit 1
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service control-plane --environment "$RAILWAY_ENVIRONMENT" --json \
+            | node --import tsx scripts/railway-variable-preflight.mts control-plane DATABASE_URL,FS_REMOTE_ACTIONS_SECRET,FS_REMOTE_ENDPOINT_SECRET,FS_REMOTE_ENVIRONMENT,FS_REMOTE_HOSTED,FS_REMOTE_INSTANCE_ID,FS_REMOTE_PUBLIC_BASE_URL,FS_REMOTE_STATE_ROOT
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable list --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --json \
+            | node --import tsx scripts/railway-variable-preflight.mts autonomous-worker DATABASE_URL,FS_REMOTE_ACTIONS_SECRET,FS_REMOTE_ENDPOINT_SECRET,FS_REMOTE_ENVIRONMENT,FS_REMOTE_INSTANCE_ID,FS_REMOTE_STATE_ROOT,GITHUB_TOKEN,OPENROUTER_API_KEY
+      - name: Stamp exact revision on both app services
+        shell: bash
+        run: |
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service control-plane --environment "$RAILWAY_ENVIRONMENT" --skip-deploys >/dev/null
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} variable set "FS_BUILD_REVISION=$DEPLOY_SHA" --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --skip-deploys >/dev/null
+      - name: Deploy control plane under existing Railway health policy
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service control-plane --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $DEPLOY_SHA control-plane"
+      - name: Verify new control plane fail-closed readiness and exact revision
+        run: node --import tsx scripts/railway-ready-check.mts "$FS_PUBLIC_BASE_URL" "$DEPLOY_SHA"
+      - name: Plan Railway IaC migration
+        shell: bash
+        run: |
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} config plan --json --out railway-production.plan > railway-plan.json
+          node --import tsx scripts/railway-plan-guard.mts railway-plan.json
+      - name: Apply pinned Railway IaC plan
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} config apply --plan railway-production.plan --yes
+      - name: Re-verify control plane after Railway health-policy migration
+        run: node --import tsx scripts/railway-ready-check.mts "$FS_PUBLIC_BASE_URL" "$DEPLOY_SHA"
+      - name: Deploy autonomous worker from the same revision
+        run: npx -y @railway/cli@${RAILWAY_CLI_VERSION} up --ci --project "$RAILWAY_PROJECT_ID" --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --message "GitHub $DEPLOY_SHA autonomous-worker"
+      - name: Verify autonomous worker deployment revision
+        shell: bash
+        run: |
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} deployment list --service autonomous-worker --environment "$RAILWAY_ENVIRONMENT" --limit 1 --json \
+            | node --import tsx scripts/railway-deployment-check.mts "$DEPLOY_SHA"
+      - name: Verify Railway IaC converged
+        shell: bash
+        run: |
+          npx -y @railway/cli@${RAILWAY_CLI_VERSION} config plan --json > railway-post-plan.json
+          node --import tsx scripts/railway-plan-guard.mts railway-post-plan.json
+          node -e "const p=require('./railway-post-plan.json'); if((p.changeSet?.changes??[]).length) process.exit(1)"
