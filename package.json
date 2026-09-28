@@ -8,6 +8,7 @@
                     "worker":  "tsx src/executor-main.ts",
                     "check":  "tsc --noEmit",
                     "node:agent":  "tsx src/node-main.ts",
+                    "node:doctor":  "tsx scripts/node-doctor.mts",
                     "build":  "tsc --noEmit",
                     "validate":  "npm run check \u0026\u0026 npm test",
                     "decision:status":  "tsx scripts/decision-learning-status.mts",

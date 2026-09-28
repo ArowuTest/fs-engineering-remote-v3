@@ -21,5 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: Node portability doctor
+        run: npm run node:doctor
       - name: Platform execution smoke
         run: node --import tsx --test tests/platform-contract.test.ts tests/process-shell.test.ts tests/processes.test.ts tests/server.integration.test.ts

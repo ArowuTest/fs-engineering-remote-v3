@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {runNodeDoctor} from '../src/node-doctor.js';
+test('node doctor proves every required check for the current supported platform',async()=>{const r=await runNodeDoctor();assert.equal(r.ok,true,JSON.stringify(r,null,2));const names=new Set(r.checks.filter(x=>x.status==='pass').map(x=>x.name));for(const required of r.requiredChecks)assert.ok(names.has(required),`missing passing check ${required}`)});
+test('node doctor rejects unsupported platforms explicitly',async()=>{await assert.rejects(runNodeDoctor({platform:'aix'}),/Unsupported FS node platform/)});
