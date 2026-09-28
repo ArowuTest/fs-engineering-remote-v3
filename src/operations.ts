@@ -92,12 +92,12 @@ export class RemoteOperations {
       platform: process.platform,
       execution: { shell: 'PowerShell', longRunningProcesses: true },
       tools: {
-        filesystem: ['list_roots','list_directory','read_file','write_file','edit_file','patch_file','search_repository','repository_map','applicable_instructions'],
+        filesystem: ['list_roots','list_directory','read_file','write_file','edit_file','patch_file','bounded_edit_and_check','search_repository','repository_map','applicable_instructions'],
         commands: ['run_command'],
         processes: ['start_process','read_process_output','stop_process','exec_list','exec_poll','exec_write','exec_cancel'],
         git: ['git_status','git_diff','git_stage','git_commit','git_push','inspect_repository','git_worktree_list','git_worktree_create','git_worktree_remove','changed_since'],
         memory: ['read_agent_memory','write_agent_memory','append_agent_event','save_checkpoint','load_checkpoint','save_project_context','load_project_context','resume_project'],
-        engineering: ['project_readiness','engineering_evidence','plan_work','run_engineering_check','docker_project_status','docker_project_logs','evidence_bundle','run_deployment','execution_acceptance_gate','database_capabilities', 'database_health', 'database_schema', 'database_query', 'database_explain'],
+        engineering: ['engineering_context','project_readiness','engineering_evidence','plan_work','run_engineering_check','docker_project_status','docker_project_logs','evidence_bundle','run_deployment','execution_acceptance_gate','database_capabilities', 'database_health', 'database_schema', 'database_query', 'database_explain'],
         missions: ['create','list','get','start','next','approve','verify','block','interrupt','resume','cancel','summary','autonomous_advance','autonomous_reconcile'],
         evidence: ['record','list','repository','tests','browser','database','deployment','external_provider'],
         runtimeInstance: this.runtime,
@@ -109,7 +109,7 @@ export class RemoteOperations {
         environment: ['environment_capabilities'],
         browser: ['browser_start', 'browser_navigate', 'browser_snapshot', 'browser_click', 'browser_type', 'browser_wait', 'browser_console', 'browser_network', 'browser_screenshot', 'browser_viewport', 'browser_accessibility', 'browser_performance', 'browser_close'],
         skills: ['list_skills', 'read_skill', 'list_skill_resources', 'read_skill_resource'],
-        agent: ['agent_bootstrap', 'capabilities', 'diagnose_runtime', 'capability_health', 'sandbox_capabilities', 'sandbox_health'],
+        agent: ['agent_bootstrap', 'capabilities', 'runtime_identity', 'harness_guidance', 'benchmark_session', 'diagnose_runtime', 'capability_health', 'sandbox_capabilities', 'sandbox_health'],
       },
       policies: {
         gitPush: true,
@@ -422,6 +422,19 @@ export class RemoteOperations {
     const content=original.toString('utf8');const count=content.split(oldText).length-1;if(count===0)throw new Error('oldText was not found.');if(!replaceAll&&count!==1)throw new Error(`oldText matched ${count} times; use a more specific value or set replaceAll=true.`);
     const updated=replaceAll?content.replaceAll(oldText,newText):content.replace(oldText,newText);const temp=`${target}.fs-patch-${process.pid}-${Date.now()}.tmp`;await fs.writeFile(temp,updated,'utf8');try{await fs.rename(temp,target);}catch(error){await fs.rm(temp,{force:true});throw error;}
     const resultingSha256=crypto.createHash('sha256').update(updated,'utf8').digest('hex');await this.trySaveRecoveryCheckpointForPath(rootName,relativePath,'atomic_file_patch',{path:relativePath,beforeSha256:actualSha256,afterSha256:resultingSha256,replacements:replaceAll?count:1});return{ok:true,path:relativePath,beforeSha256:actualSha256,afterSha256:resultingSha256,replacements:replaceAll?count:1};
+  }
+
+  async boundedEditAndCheck(rootName:string,cwd:string,relativePath:string,oldText:string,newText:string,kind:'test'|'build'|'check'|'lint'|'typecheck',command?:string,replaceAll=false,timeoutMs?:number){
+    const root=this.getRoot(rootName),rootRelative=path.normalize(path.join(cwd,relativePath)),target=assertWritablePath(root,rootRelative),original=await fs.readFile(target),beforeSha256=crypto.createHash('sha256').update(original).digest('hex'),content=original.toString('utf8'),count=content.split(oldText).length-1;
+    if(count===0)throw new Error('oldText was not found.');if(!replaceAll&&count!==1)throw new Error(`oldText matched ${count} times; use a more specific value or set replaceAll=true.`);
+    const updated=replaceAll?content.replaceAll(oldText,newText):content.replace(oldText,newText),afterSha256=crypto.createHash('sha256').update(updated,'utf8').digest('hex'),temp=`${target}.fs-bounded-${process.pid}-${Date.now()}.tmp`;
+    await fs.writeFile(temp,updated,'utf8');try{await fs.rename(temp,target);}catch(error){await fs.rm(temp,{force:true});throw error;}
+    await this.trySaveRecoveryCheckpointForPath(rootName,rootRelative,'bounded_edit_before_check',{path:rootRelative,beforeSha256,afterSha256,replacements:replaceAll?count:1,kind});
+    let check:any;try{check=await this.runEngineeringCheck(rootName,cwd,kind,command,timeoutMs);}catch(error){check={schemaVersion:'fs-remote.engineering-check.v1',kind,status:'failed',error:error instanceof Error?error.message:String(error)};}
+    if(check.status==='passed')return{schemaVersion:'fs-remote.bounded-edit-check.v1',accepted:true,rolledBack:false,path:rootRelative,beforeSha256,afterSha256,replacements:replaceAll?count:1,check};
+    const current=await fs.readFile(target),currentSha256=crypto.createHash('sha256').update(current).digest('hex');let rolledBack=false,rollbackReason='concurrent_change_detected';
+    if(currentSha256===afterSha256){const rollbackTemp=`${target}.fs-rollback-${process.pid}-${Date.now()}.tmp`;await fs.writeFile(rollbackTemp,original);try{await fs.rename(rollbackTemp,target);rolledBack=true;rollbackReason='verification_failed';}catch(error){await fs.rm(rollbackTemp,{force:true});throw error;}await this.appendAgentEvent(rootName,cwd,{type:'BOUNDED_EDIT_ROLLED_BACK',path:rootRelative,kind,beforeSha256,failedSha256:afterSha256});}
+    return{schemaVersion:'fs-remote.bounded-edit-check.v1',accepted:false,rolledBack,rollbackReason,path:rootRelative,beforeSha256,afterSha256,replacements:replaceAll?count:1,check};
   }
 
 

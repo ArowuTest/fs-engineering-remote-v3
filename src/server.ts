@@ -273,6 +273,10 @@ export function createRemoteServer(
     title:'Patch file with hash precondition', description:'Atomically replace exact text only if the file SHA-256 still matches the caller-observed hash. Prevents overwriting concurrent user/agent changes.',
     inputSchema:z.object({root:z.string(),path:z.string(),expectedSha256:z.string().regex(/^[A-Fa-f0-9]{64}$/),oldText:z.string().min(1),newText:z.string(),replaceAll:z.boolean().default(false)}), annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
   },async({root,path,expectedSha256,oldText,newText,replaceAll})=>text(await ops.patchFile(root,path,expectedSha256,oldText,newText,replaceAll)));
+  server.registerTool('bounded_edit_and_check', {
+    title:'Apply exact edit and verify in one governed round trip', description:'FAST-path for one exact bounded text edit followed immediately by a targeted engineering check. The edit is atomic, oldText must be unique unless replaceAll=true, and a failed check triggers guarded rollback only when the file still matches the post-edit SHA. Use when the intended exact edit and verification command are already known.',
+    inputSchema:z.object({root:z.string(),cwd:z.string().default('.'),path:z.string().min(1),oldText:z.string().min(1),newText:z.string(),kind:z.enum(['test','build','check','lint','typecheck']),command:z.string().optional(),replaceAll:z.boolean().default(false),timeoutMs:z.number().int().min(1000).max(900000).optional()}), annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
+  },async({root,cwd,path,oldText,newText,kind,command,replaceAll,timeoutMs})=>text(await ops.boundedEditAndCheck(root,cwd,path,oldText,newText,kind,command,replaceAll,timeoutMs)));
 
   server.registerTool('exec_list', {
     title: 'List durable execution sessions', description: 'List current and persisted execution sessions, including sessions interrupted by an FS Remote restart.',

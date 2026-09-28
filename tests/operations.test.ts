@@ -42,6 +42,27 @@ test('shared operations write and edit files through the configured root policy'
   assert.equal(await fs.readFile(path.join(dir, 'notes/test.txt'), 'utf8'), 'beta');
 });
 
+test('bounded edit fast path applies one exact edit and accepts a passing targeted check', async () => {
+  const { dir, ops } = await fixture();
+  await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'src/value.js'), 'export const value = "old";\n', 'utf8');
+  const result = await ops.boundedEditAndCheck('fixture', '.', 'src/value.js', '"old"', '"new"', 'test', 'node -e "process.exit(0)"');
+  assert.equal(result.accepted, true);
+  assert.equal(result.rolledBack, false);
+  assert.equal(await fs.readFile(path.join(dir, 'src/value.js'), 'utf8'), 'export const value = "new";\n');
+});
+
+test('bounded edit fast path rolls back when targeted verification fails', async () => {
+  const { dir, ops } = await fixture();
+  await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'src/value.js'), 'export const value = "old";\n', 'utf8');
+  const result = await ops.boundedEditAndCheck('fixture', '.', 'src/value.js', '"old"', '"new"', 'test', 'node -e "process.exit(1)"');
+  assert.equal(result.accepted, false);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.rollbackReason, 'verification_failed');
+  assert.equal(await fs.readFile(path.join(dir, 'src/value.js'), 'utf8'), 'export const value = "old";\n');
+});
+
 test('shared operations permit normal engineering delivery commands', async () => {
   const { ops } = await fixture();
   const result = await ops.runCommand('fixture', '.', process.platform === 'win32' ? 'Write-Output delivery-enabled' : 'printf delivery-enabled');
