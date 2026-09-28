@@ -317,8 +317,15 @@ export class RemoteOperations {
   }
 
 
+  private async recoveryRepositoryState(rootName:string,cwd:string){
+    const root=this.getRoot(rootName),workingDirectory=resolveInRoot(root,cwd);
+    const run=async(args:string[],fallback:string)=>{const direct=await runGitDirect(workingDirectory,args,this.config.commandTimeoutMs);if(direct.exitCode===0)return direct;const r=await this.processes.run(fallback,workingDirectory,this.config.commandTimeoutMs);return{exitCode:r.exitCode??1,stdout:r.stdout,stderr:r.stderr,durationMs:r.durationMs};};
+    const branch=await run(['branch','--show-current'],'git branch --show-current'),head=await run(['rev-parse','HEAD'],'git rev-parse HEAD'),status=await run(['status','--short','--branch'],'git status --short --branch');
+    return{branch:branch.stdout.trim(),head:head.stdout.trim(),dirty:status.stdout.split(/\r?\n/).some((line:string)=>line&&!line.startsWith('##')),status:status.stdout};
+  }
+
   async saveRecoveryCheckpoint(rootName: string, cwd: string, reason: string, details: Record<string, unknown> = {}) {
-    const repository = await this.inspectRepository(rootName, cwd);
+    const repository = await this.recoveryRepositoryState(rootName, cwd);
     const payload = {
       schemaVersion: 'fs-remote.recovery-checkpoint.v1',
       kind: 'automatic-recovery',
@@ -336,7 +343,7 @@ export class RemoteOperations {
   async loadRecoveryCheckpoint(rootName: string, cwd: string) {
     const memory = await this.readAgentMemory(rootName, cwd, 'recovery-checkpoint.json');
     const checkpoint = JSON.parse(memory.content);
-    const repository = await this.inspectRepository(rootName, cwd);
+    const repository = await this.recoveryRepositoryState(rootName, cwd);
     const savedRepo = checkpoint.repository ?? {};
     return { checkpoint, repository: { branch: repository.branch, head: repository.head, dirty: repository.dirty }, diverged: savedRepo.branch !== repository.branch || savedRepo.head !== repository.head, memoryTrust: 'observed-recovery-state' };
   }
