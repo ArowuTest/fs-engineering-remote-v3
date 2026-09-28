@@ -61,14 +61,38 @@ A `--bare` Claude profile was also rejected because that mode did not inherit th
 
 ## Warm-process experiment
 
-A long-lived Claude `stream-json` benchmark harness has been implemented. A protocol smoke test successfully sent a user turn and received a structured `result` event from the same process. The smoke test encountered the active Claude 429 session limit, so no warm-process performance conclusion is recorded yet.
+A long-lived Claude `stream-json` harness was run successfully after the subscription window reset.
 
-The next valid experiment is:
+### Warm identity turns
 
-- one warm-up identity turn in a persistent Claude process;
-- three measured identity turns through the same process;
-- compare each turn with the 334.346 ms direct V3 identity baseline;
-- if successful, repeat the bounded-edit benchmark using a persistent harness profile and keep it separate from the stateless Claude profile.
+One warm-up plus three measured `runtime_identity` turns were executed through the same Claude process. The measured turn times were:
+
+- 3,405.407 ms
+- 3,324.828 ms
+- 3,200.403 ms
+
+Median measured wall time: **3,324.828 ms**.
+
+The warm-up turn took 15,020.138 ms. The measured turns therefore show that process/session reuse removes most of the cold-start penalty for this trivial tool task, although the warm Claude path is still materially slower than the 334.346 ms direct V3 identity baseline.
+
+### Warm bounded-edit turns
+
+The full bounded-edit benchmark was then repeated through one persistent Claude process, resetting and recommitting the Git fixture before every turn and independently scoring each turn. All three measured turns were accepted and used exactly four tool calls.
+
+| Metric | Cold Claude + V3 | Warm persistent Claude + V3 |
+| --- | ---: | ---: |
+| Median wall time | 32,046 ms | 18,288 ms |
+| Median V3 handler time | 3,646.523 ms | 3,841.507 ms |
+| Median outside-V3 time | 28,399.477 ms | 11,647.538 ms |
+| Median pre-first-tool time | 17,552.332 ms | 2,328.696 ms |
+| Median inter-call time | 8,139.716 ms | 7,793.842 ms |
+| Median post-last-tool time | 3,229 ms | 1,698 ms |
+| Tool calls | 4 | 4 |
+| Accepted measured runs | 3/3 | 3/3 |
+
+Warm process reuse reduced median end-to-end time by about 43% and cut the pre-first-tool component by about 87%. It did **not** materially remove inter-call model reasoning, which remains the largest persistent outside-FS component once startup is amortized.
+
+One measured warm run had an FS-handler outlier: `engineering_context` took 5.705 s and `run_engineering_check` 6.811 s, while the other three warm-profile runs were roughly 0.73–0.84 s and 1.95–1.97 s respectively. The medians above are robust to that single run, but the variance should remain visible and be investigated separately rather than attributed to Claude process reuse.
 
 ## Engineering implications
 
