@@ -308,10 +308,23 @@ export class RemoteOperations {
     try {
       const root = this.getRoot(rootName);
       const directory = path.dirname(resolveInRoot(root, relativePath));
+      const boundary = path.resolve(root.path);
+      let current = path.resolve(directory);
+      while (current === boundary || current.startsWith(boundary + path.sep)) {
+        if (existsSync(path.join(current, '.git'))) {
+          const cwd = path.relative(boundary, current) || '.';
+          return await this.saveRecoveryCheckpoint(rootName, cwd, reason, details);
+        }
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        current = parent;
+      }
       let top = await runGitDirect(directory,['rev-parse','--show-toplevel'],this.config.commandTimeoutMs);
       if(top.exitCode!==0){const fallback=await this.processes.run('git rev-parse --show-toplevel',directory,this.config.commandTimeoutMs);top={exitCode:fallback.exitCode??1,stdout:fallback.stdout,stderr:fallback.stderr,durationMs:fallback.durationMs};}
       if (top.exitCode !== 0) return null;
-      const cwd = path.relative(root.path, top.stdout.trim()) || '.';
+      const topPath = path.resolve(top.stdout.trim());
+      if (topPath !== boundary && !topPath.startsWith(boundary + path.sep)) return null;
+      const cwd = path.relative(boundary, topPath) || '.';
       return await this.saveRecoveryCheckpoint(rootName, cwd, reason, details);
     } catch { return null; }
   }
