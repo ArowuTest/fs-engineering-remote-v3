@@ -6,7 +6,6 @@ export default defineRailway(() => {
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     start: "npm run worker",
     replicas: { "ams": 1 },
-    deploy: { restartPolicyMaxRetries: 10 },
     env: { DATABASE_URL: preserve(), FS_BUILD_REVISION: preserve(), FS_REMOTE_ACTIONS_SECRET: preserve(), FS_REMOTE_ENDPOINT_SECRET: preserve(), FS_REMOTE_ENVIRONMENT: preserve(), FS_REMOTE_INSTANCE_ID: preserve(), FS_REMOTE_STATE_ROOT: preserve(), GITHUB_TOKEN: preserve(), OPENROUTER_API_KEY: preserve() },
   });
   const Postgres = service("Postgres", {
@@ -23,7 +22,6 @@ export default defineRailway(() => {
     healthcheck: "/readyz",
     healthcheckTimeout: 120,
     replicas: { "ams": 1 },
-    deploy: { restartPolicyMaxRetries: 10 },
     env: { DATABASE_URL: preserve(), FS_BUILD_REVISION: preserve(), FS_REMOTE_ACTIONS_SECRET: preserve(), FS_REMOTE_ENDPOINT_SECRET: preserve(), FS_REMOTE_ENVIRONMENT: preserve(), FS_REMOTE_HOSTED: preserve(), FS_REMOTE_INSTANCE_ID: preserve(), FS_REMOTE_PUBLIC_BASE_URL: preserve(), FS_REMOTE_STATE_ROOT: preserve() },
   });
 
