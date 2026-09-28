@@ -1,7 +1,7 @@
 import { SERVICE_VERSION } from './version.js';
 export const NODE_PROTOCOL_VERSION=1;
 export const NODE_MIN_PROTOCOL_VERSION=1;
-export interface NodeAgentIdentity{schemaVersion:'fs.node.agent.v1';serviceVersion:string;protocolVersion:number;gitCommit?:string;platform:string;arch:string;node:string}
+export interface NodeAgentIdentity{schemaVersion:'fs.node.agent.v1';serviceVersion:string;protocolVersion:number;gitCommit?:string;platform:string;arch:string;node:string;sessionId?:string;startedAt?:string}
 export interface NodeCompatibility{schemaVersion:'fs.node.compatibility.v1';status:'compatible'|'upgrade_required'|'unknown';executionAllowed:boolean;serverServiceVersion:string;serverProtocolVersion:number;minimumProtocolVersion:number;agentServiceVersion?:string;agentProtocolVersion?:number;reason:string}
 export function evaluateNodeCompatibility(agent?:Partial<NodeAgentIdentity>|null):NodeCompatibility{
  const base={schemaVersion:'fs.node.compatibility.v1' as const,serverServiceVersion:SERVICE_VERSION,serverProtocolVersion:NODE_PROTOCOL_VERSION,minimumProtocolVersion:NODE_MIN_PROTOCOL_VERSION,agentServiceVersion:agent?.serviceVersion,agentProtocolVersion:agent?.protocolVersion};
