@@ -111,6 +111,25 @@ On an isolated V3 runtime using the same accepted four-call bounded-edit benchma
 
 The checkpoint microbenchmark after the change measured roughly 722 ms median patch work, 1,900 ms engineering-check wall time, 1,308 ms of actual test-command time and about 592 ms of post-check checkpoint overhead.
 
+A second recovery optimization then limited automatic repository recovery snapshots to the repository fields they actually persist (branch, HEAD, dirty/status), and successful non-mutating engineering checks stopped rewriting the recovery checkpoint after already recording durable `ENGINEERING_CHECK` evidence. Failed or timed-out checks still refresh recovery state. The same independently accepted isolated bounded-edit benchmark then measured **2,469 ms median** across 2,561 ms, 2,469 ms and 2,444 ms measured runs, all 3/3 accepted. `run_engineering_check` itself fell to roughly 1.22–1.29 s in those runs.
+
+### Warm Claude after FS runtime optimization
+
+The persistent Claude bounded-edit profile was rerun against the optimized isolated V3 runtime. All three measured turns were accepted and used exactly four task calls.
+
+| Metric | Earlier warm Claude | Optimized warm Claude |
+| --- | ---: | ---: |
+| Median wall time | 18,288 ms | **10,031 ms** |
+| Median V3 handler time | 3,841.507 ms | **2,340.924 ms** |
+| Median outside-V3 time | 11,647.538 ms | **7,726.560 ms** |
+| Median pre-first-tool | 2,328.696 ms | **1,615.904 ms** |
+| Median inter-call | 7,793.842 ms | **5,328.656 ms** |
+| Median post-last-tool | 1,698 ms | **739 ms** |
+| Tool calls | 4 | 4 |
+| Accepted measured runs | 3/3 | 3/3 |
+
+The optimized persistent-harness path is therefore about **45% faster end to end** than the earlier warm profile. The remaining median wall time is still dominated by the harness/model envelope rather than FS: about 2.34 s of V3 handler work versus 7.73 s outside V3. Compared with the optimized direct V3 median of 2.47 s, persistent Claude is about 4x slower end to end while performing the same four accepted operations.
+
 ## Engineering implications
 
 Current evidence supports these priorities:
