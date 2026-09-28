@@ -27,6 +27,10 @@ test('run captures stdout and exit code', async () => {
   assert.equal(result.exitCode, 0);
   assert.match(result.stdout, /FS_REMOTE_OK/);
   assert.equal(result.timedOut, false);
+  assert.ok(result.spawnLatencyMs >= 0);
+  assert.ok(result.executionMs >= 0);
+  assert.ok(result.durationMs >= result.spawnLatencyMs);
+  assert.ok(Math.abs(result.durationMs - (result.spawnLatencyMs + result.executionMs)) < 5);
 });
 test('start and read preserve output until the job exits', async () => {
   const { processId } = manager.start(

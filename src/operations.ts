@@ -23,6 +23,7 @@ import { budgetGate, mergeQueue, type AutonomousBudget, type Usage, type MergeCa
 import { createPortableMemory, memoryPolicy, type PortableMemory } from './memory-trust.js';
 import { quotaDecision, usageEnvelope, type WorkspaceQuota, type WorkspaceUsage, type ExecutionUsage } from './accounting.js';
 import { executionAcceptance, type ExecutionAcceptanceInput } from './acceptance.js';
+import { inspectGitDirect, runGitDirect } from './git-inspect.js';
 import {
   assertCommandAllowed,
   assertReadablePath,
@@ -307,7 +308,8 @@ export class RemoteOperations {
     try {
       const root = this.getRoot(rootName);
       const directory = path.dirname(resolveInRoot(root, relativePath));
-      const top = await this.processes.run('git rev-parse --show-toplevel', directory, this.config.commandTimeoutMs);
+      let top = await runGitDirect(directory,['rev-parse','--show-toplevel'],this.config.commandTimeoutMs);
+      if(top.exitCode!==0){const fallback=await this.processes.run('git rev-parse --show-toplevel',directory,this.config.commandTimeoutMs);top={exitCode:fallback.exitCode??1,stdout:fallback.stdout,stderr:fallback.stderr,durationMs:fallback.durationMs};}
       if (top.exitCode !== 0) return null;
       const cwd = path.relative(root.path, top.stdout.trim()) || '.';
       return await this.saveRecoveryCheckpoint(rootName, cwd, reason, details);
@@ -564,11 +566,9 @@ export class RemoteOperations {
   async inspectRepository(rootName: string, cwd = '.') {
     const root = this.getRoot(rootName);
     const workingDirectory = resolveInRoot(root, cwd);
-    const run = async (command: string) => this.processes.run(command, workingDirectory, this.config.commandTimeoutMs);
-    const [branch, head, status, remotes, recent] = await Promise.all([
-      run('git branch --show-current'), run('git rev-parse HEAD'), run('git status --short --branch'),
-      run('git remote -v'), run('git log -5 --oneline'),
-    ]);
+    const direct=await inspectGitDirect(workingDirectory,this.config.commandTimeoutMs);
+    const fallback=async(name:'branch'|'head'|'status'|'remotes'|'recent',command:string)=>{const current=direct[name];if(current.exitCode===0)return current;const r=await this.processes.run(command,workingDirectory,this.config.commandTimeoutMs);return{exitCode:r.exitCode??1,stdout:r.stdout,stderr:r.stderr,durationMs:r.durationMs};};
+    const branch=await fallback('branch','git branch --show-current'),head=await fallback('head','git rev-parse HEAD'),status=await fallback('status','git status --short --branch'),remotes=await fallback('remotes','git remote -v'),recent=await fallback('recent','git log -5 --oneline');
     const files = await fs.readdir(workingDirectory);
     const packageJson = files.includes('package.json') ? JSON.parse(await fs.readFile(path.join(workingDirectory, 'package.json'), 'utf8')) : undefined;
     return {

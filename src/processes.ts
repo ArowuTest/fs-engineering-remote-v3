@@ -3,12 +3,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+export interface ProcessRunTelemetry {
+  command: string;
+  cwd: string;
+  exitCode: number | null;
+  timedOut: boolean;
+  spawnLatencyMs: number;
+  executionMs: number;
+  durationMs: number;
+}
+
 interface ProcessManagerOptions {
   shell: string;
   maxOutputBytes: number;
   stateDir?: string;
   sessionRetentionMs?: number;
   maxPersistedSessions?: number;
+  onRun?: (event: ProcessRunTelemetry) => void;
 }
 
 const EXECUTION_SESSION_SCHEMA = 'fs-remote.exec-session.v1';
@@ -33,6 +44,9 @@ export interface RunResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  spawnLatencyMs: number;
+  executionMs: number;
+  durationMs: number;
 }
 
 function commandEnvironment(): NodeJS.ProcessEnv {
@@ -104,12 +118,15 @@ export class ProcessManager {
 
   async run(command: string, cwd: string, timeoutMs: number): Promise<RunResult> {
     return await new Promise((resolve) => {
+      const started = performance.now();
+      let spawnedAt: number | null = null;
       const shell = resolveCommandShell(this.options.shell);
       const child = spawn(shell, shellArgs(shell, command), {
         cwd,
         env: commandEnvironment(),
         windowsHide: true,
       });
+      child.once('spawn', () => { spawnedAt = performance.now(); });
       let stdout = '';
       let stderr = '';
       let timedOut = false;
@@ -130,14 +147,18 @@ export class ProcessManager {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        const ended = performance.now(), telemetry={command,cwd,exitCode:null,timedOut:false,spawnLatencyMs:ended-started,executionMs:0,durationMs:ended-started};
         stderr = append(stderr, Buffer.from(`Failed to spawn ${shell}: ${error.message}\n`, 'utf8'));
-        resolve({ exitCode: null, stdout, stderr, timedOut: false });
+        try { this.options.onRun?.(telemetry); } catch { /* telemetry must never affect command execution */ }
+        resolve({ exitCode: null, stdout, stderr, timedOut: false, spawnLatencyMs: telemetry.spawnLatencyMs, executionMs: telemetry.executionMs, durationMs: telemetry.durationMs });
       });
       child.on('close', (code) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        resolve({ exitCode: code, stdout, stderr, timedOut });
+        const ended = performance.now(), actualSpawnedAt = spawnedAt ?? started, telemetry={command,cwd,exitCode:code,timedOut,spawnLatencyMs:Math.max(0,actualSpawnedAt-started),executionMs:Math.max(0,ended-actualSpawnedAt),durationMs:Math.max(0,ended-started)};
+        try { this.options.onRun?.(telemetry); } catch { /* telemetry must never affect command execution */ }
+        resolve({ exitCode: code, stdout, stderr, timedOut, spawnLatencyMs: telemetry.spawnLatencyMs, executionMs: telemetry.executionMs, durationMs: telemetry.durationMs });
       });
     });
   }
