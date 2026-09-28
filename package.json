@@ -19,7 +19,9 @@
                     "perf:claude:bounded":  "tsx scripts/benchmark-claude-bounded.mts",
                     "perf:claude:warm":  "tsx scripts/benchmark-claude-warm-stream.mts",
                     "perf:claude:warm:bounded":  "tsx scripts/benchmark-claude-warm-bounded.mts",
-                    "perf:direct:bounded":  "tsx scripts/benchmark-direct-bounded-session.mts"
+                    "perf:claude:warm:bounded:fast":  "tsx scripts/benchmark-claude-warm-bounded-fast.mts",
+                    "perf:direct:bounded":  "tsx scripts/benchmark-direct-bounded-session.mts",
+                    "perf:direct:bounded:fast":  "tsx scripts/repeat-live-bounded-fast-benchmark.mts"
                 },
     "keywords":  [
 

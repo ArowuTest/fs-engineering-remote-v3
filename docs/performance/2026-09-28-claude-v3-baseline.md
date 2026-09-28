@@ -171,3 +171,43 @@ Relevant scripts:
 - `scripts/mcp-benchmark-client.mts`
 
 Benchmark session data remains in the local performance store and is not required to trust this note; the figures above are copied from accepted persisted runs and their timing envelopes.
+
+## One-round-trip bounded edit + verification fast path
+
+V3 now exposes `bounded_edit_and_check` for FAST, low-risk work where one exact text edit and its narrow verification command are already known. The operation performs the exact edit atomically, runs the targeted structured engineering check immediately, and on verification failure restores the original bytes only if the file still matches the post-edit SHA. This guarded rollback prevents overwriting a concurrent change made while the check was running.
+
+### Direct V3 comparison
+
+One warm-up plus five measured repetitions were run for both the existing four-call path and the new one-call composite path against the same live V3 runtime. All measured runs in both profiles independently passed the fixture tests.
+
+| Metric | Four-call direct V3 | One-call composite V3 |
+| --- | ---: | ---: |
+| Median wall time | 2,626.139 ms | **1,830.354 ms** |
+| Tool calls | 4 | **1** |
+| Median response bytes | 2,436 | **1,070** |
+| Accepted measured runs | 5/5 | 5/5 |
+
+The composite reduced direct median wall time by about **30%**, tool round trips by **75%**, and response payload by about **56%** while preserving independent acceptance.
+
+### Persistent Claude comparison
+
+The optimized warm four-call Claude profile previously measured **10,031 ms median** end to end, with about 2,341 ms inside V3 and 7,727 ms outside V3. Its largest remaining outside-FS component was inter-call reasoning at about 5,329 ms median.
+
+The composite path was then tested through one persistent Claude process. An initial benchmark prompt used escaped quote notation for `oldText`/`newText`; that setup produced immediate tool failures in one run series and is retained as rejected benchmark evidence rather than treated as performance data. The prompt was corrected to provide the exact literal edit arguments unambiguously.
+
+With the corrected prompt, one warm-up plus **five measured turns** were run. All five measured turns were independently accepted.
+
+| Metric | Warm Claude four-call | Warm Claude one-call composite |
+| --- | ---: | ---: |
+| Median wall time | 10,031 ms | **6,112 ms** |
+| Median V3 handler time | 2,340.924 ms | **2,315.938 ms** |
+| Median outside-V3 time | 7,726.560 ms | **3,699.766 ms** |
+| Median pre-first-tool time | 1,615.904 ms | 2,704.941 ms |
+| Median inter-call time | 5,328.656 ms | **0 ms** |
+| Median post-last-tool time | 739 ms | 974 ms |
+| Tool calls | 4 | **1** |
+| Accepted measured runs | 3/3 | **5/5** |
+
+The composite path reduced warm Claude median end-to-end time by about **39%** versus the already-optimized four-call warm profile. V3 handler time remained essentially unchanged; the gain came from eliminating the model/harness reasoning pauses between tool calls. This validates a general V3 optimization principle: when an exact bounded mutation and its acceptance check are already known, a governed composite operation can preserve safety while avoiding unnecessary model round trips.
+
+The fast path is intentionally narrow. It is not a substitute for investigation, multi-file work, ambiguous edits, destructive changes, or higher-risk verification. `harness_guidance` recommends it only for eligible FAST tasks; other work continues to use `engineering_context`, targeted investigation, explicit mutation, and risk-appropriate verification.
