@@ -5,6 +5,7 @@ export function registerNodeRoutes(app:FastifyInstance,config:AppConfig){const n
  app.post('/node/register',{preHandler:admin},async(req)=>nodes.register(regBody.parse(req.body)));
  app.get('/node/list',{preHandler:admin},async()=>nodes.list());
  app.get('/node/job/:id',{preHandler:admin},async(req:any)=>nodes.getJob(String(req.params.id)));
+ app.post('/node/job/:id/retry',{preHandler:admin},async(req:any,reply)=>{try{return await nodes.retryJob(String(req.params.id))}catch(e){return reply.code(409).send({error:e instanceof Error?e.message:String(e)})}});
  app.post('/node/enqueue',{preHandler:admin},async(req)=>nodes.enqueue(enqueueBody.parse(req.body)));
  app.post('/node/heartbeat',async(req,reply)=>{try{const a=nodeAuth(req),b=heartbeatBody.parse(req.body??{}),identity=await NodeRegistry.resolveIdentity(a.id,a.secret);if(!identity)throw new Error('Invalid node credentials.');return await new NodeRegistry(identity.workspaceId).heartbeat(a.id,a.secret,b.readiness,b.agent)}catch(e){await reply.code(401).send({error:e instanceof Error?e.message:String(e)})}});
  app.post('/node/recover',{preHandler:admin},async()=>nodes.recover());
