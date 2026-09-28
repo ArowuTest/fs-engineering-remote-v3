@@ -94,6 +94,23 @@ Warm process reuse reduced median end-to-end time by about 43% and cut the pre-f
 
 One measured warm run had an FS-handler outlier: `engineering_context` took 5.705 s and `run_engineering_check` 6.811 s, while the other three warm-profile runs were roughly 0.73–0.84 s and 1.95–1.97 s respectively. The medians above are robust to that single run, but the variance should remain visible and be investigated separately rather than attributed to Claude process reuse.
 
+## Windows Git-inspection tail-latency finding
+
+A later direct-control regression showed the accepted bounded-edit median rising from 4,889 ms to 8,208 ms, with handler time rising from 3,598 ms to 6,177 ms. Command-level instrumentation localized intermittent ~5-second stalls to Git command execution during recovery/repository inspection rather than to process spawn itself.
+
+A controlled launch test found that sequential direct Git was normally much cheaper than PowerShell-wrapped Git (about 121 ms vs 365 ms median for `git branch --show-current`), but the decisive result came from repository-inspection strategy testing:
+
+| Strategy | Median inspection wall | Max | Runs >3 s |
+| --- | ---: | ---: | ---: |
+| Five direct Git commands concurrently | ~227 ms | 10,234 ms | 8/20 |
+| Five direct Git commands sequentially | ~587 ms | 626 ms | 0/20 |
+
+The fast concurrent path therefore had unacceptable Windows tail latency despite its lower best-case median. V3 now performs the static repository-inspection Git commands sequentially via direct `git` subprocesses, with the existing shell path retained as fallback.
+
+On an isolated V3 runtime using the same accepted four-call bounded-edit benchmark, the pre-change sequentially accepted baseline was **6,623 ms median**. After the sequential direct-Git change, three measured accepted runs were 3,338 ms, 3,320 ms and 3,415 ms, for a **3,338 ms median**. All three independently passed the fixture tests. This is about a 50% reduction from that immediately preceding isolated baseline while also removing the observed Git concurrency tail in the measured runs.
+
+The checkpoint microbenchmark after the change measured roughly 722 ms median patch work, 1,900 ms engineering-check wall time, 1,308 ms of actual test-command time and about 592 ms of post-check checkpoint overhead.
+
 ## Engineering implications
 
 Current evidence supports these priorities:
