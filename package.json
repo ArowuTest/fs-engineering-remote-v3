@@ -4,6 +4,7 @@
     "main": "index.js",
     "scripts": {
         "test": "tsx --test tests/**/*.test.ts",
+        "test:postgres": "node --import tsx --test --test-concurrency=1 tests/postgres/*.integration.ts",
         "start": "tsx src/index.ts",
         "worker": "tsx src/executor-main.ts",
         "check": "tsc --noEmit",

@@ -1,3 +1,4 @@
+import { assertRuntimeDurability } from './runtime-durability.js';
 import { buildHttpApp } from './http.js';
 import { loadConfig } from './config.js';
 import { migrateDatabase } from './db.js';
@@ -5,6 +6,7 @@ import { migrateMultiUserSchema } from './multi-user-schema.js';
 import { bootstrapInitialOwner } from './bootstrap-owner.js';
 import { acquireRuntimeOwnership } from './runtime-ownership.js';
 
+assertRuntimeDurability();
 const config = loadConfig();
 let ownership: Awaited<ReturnType<typeof acquireRuntimeOwnership>> | undefined;
 let app: ReturnType<typeof buildHttpApp> | undefined;

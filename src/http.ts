@@ -8,6 +8,7 @@ import { ProcessManager } from './processes.js';
 import { createRemoteServer } from './server.js';
 import path from 'node:path';
 import { runtimeIdentity } from './runtime.js';
+import { requiresDurableState } from './runtime-durability.js';
 import { databaseHealth } from './db.js';
 import { readiness } from './readiness.js';
 import { registerNodeRoutes } from './node-http.js';
@@ -35,14 +36,19 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   app.addHook('onSend', async (_request, reply, payload) => { reply.header('x-content-type-options','nosniff'); reply.header('referrer-policy','no-referrer'); reply.header('x-frame-options','DENY'); return payload; });
 
   app.addHook('onRequest', async (request, reply) => {
-    if (request.headers.origin && !request.url.startsWith('/portal') && !request.url.startsWith('/api/')) {
-      await reply.code(403).send({ error: 'Browser-origin requests are not accepted.' });
+    if(request.headers.origin){
+      const route=request.url.split('?')[0];
+      const browserRoute=route==='/portal'||route.startsWith('/portal/')||route.startsWith('/api/')||route==='/oauth/authorize';
+      const configured=process.env.FS_REMOTE_PUBLIC_BASE_URL;
+      let expected='',supplied='';
+      try{expected=new URL(configured??`${request.protocol}://${request.headers.host}`).origin;supplied=new URL(String(request.headers.origin)).origin}catch{}
+      if(!browserRoute||!expected||supplied==='null'||supplied!==expected)return reply.code(403).send({error:'Browser-origin requests are not accepted.'});
     }
   });
 
   app.get('/healthz', async () => {
     const database = await databaseHealth();
-    const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
+    const durableRequired = requiresDurableState();
     const deployment = deploymentIdentity();
     return {
       ok: database.healthy || (!durableRequired && !database.configured),
@@ -57,7 +63,7 @@ export function buildHttpApp(config: AppConfig): FastifyInstance {
   });
   app.get('/readyz', async (_request, reply) => {
     const database = await databaseHealth();
-    const durableRequired = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.FS_REMOTE_HOSTED === '1');
+    const durableRequired = requiresDurableState();
     const state = readiness({database:{configured:database.configured,healthy:database.healthy},durableRequired});
     return reply.code(state.ready?200:503).send({...state,deployment:deploymentIdentity()});
   });

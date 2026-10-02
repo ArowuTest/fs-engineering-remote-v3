@@ -1,85 +1,66 @@
-# FS Remote
+# FS Remote V3
 
-FS Remote gives ChatGPT controlled access to a local development computer while keeping
-source code, Docker, Git and project files on that computer. The primary workflow is:
-edit locally, test locally, review locally, commit locally, and push only when explicitly approved.
+FS Remote V3 is a harness-neutral engineering control plane with customer-local execution as the default. It coordinates workspaces, users, execution nodes, missions, workers, verification evidence and engineering knowledge. It is not a replacement chat interface and is not Windows-only.
 
-## Architecture
+## Current implementation
 
-FS Remote exposes two adapters over one shared local execution/security engine:
+- **Control plane:** Node.js 22, TypeScript and Fastify; `src/index.ts` → `src/http.ts`. MCP, compact authenticated Actions, node protocol and account/administration routes share governed services.
+- **Worker:** `src/executor-main.ts`. Coordinates reasoning, verification and review work. PostgreSQL is authoritative for hosted missions, leases, evidence and handoffs.
+- **Customer node:** `src/node-main.ts`. Outbound authenticated HTTP polling, enrollment, readiness/version reporting, lease renewal and local tool execution. Windows, Linux and macOS contracts exist; physical-platform acceptance is separate from CI.
+- **Database:** PostgreSQL through `pg` and explicit SQL in `src/db.ts`, `src/multi-user-schema.ts` and the state stores. There is no Prisma ORM in this checkout.
+- **Portal:** server-generated HTML/JavaScript in `src/portal.ts`, not React.
+- **Decision/experience:** deterministic governance remains authoritative. Learned outputs are shadow/advisory. Workspace experience caches have durable evidence records; a learning outcome is not authorization.
 
-1. MCP: ChatGPT custom/developer MCP → Cloudflare Tunnel → local MCP endpoint.
-2. GPT Actions: private custom GPT → authenticated REST/OpenAPI → Cloudflare Tunnel → local Actions API.
+## Release boundaries
 
-Both terminate at `127.0.0.1:8765` on the target PC and share the same configured roots,
-PowerShell process manager, Git helpers and security policies. Cloudflare transports traffic;
-the application itself is not deployed to Cloudflare.
+The local target remains enabled. Optional sandbox and hosted **repository-code execution** are currently policy-disabled in `src/execution-release.ts`. The adapters remain in source, but their isolation, workspace-scoped durability and result/accounting acceptance are not complete. A healthy endpoint or environment flag must not bypass this release boundary. Hosted coordination/reasoning/review workers are not disabled by this restriction.
 
-## Capabilities
+A green `/readyz` checks declared serving dependencies; it is not proof that all security, recovery or product launch gates have passed. No external-user production acceptance is implied by this README.
 
-The shared operations support health, configured roots, directory listing, safe file read/write/edit,
-foreground commands, long-running process start/read/stop, and Git status/diff/stage/commit.
+## Engineering and verification
 
-There is intentionally no `git_push` tool or REST endpoint. Generic commands containing `git push`
-are blocked before Git runs.
+```sh
+npm ci
+npm run check
+npm test
+npm run node:doctor
+```
 
-## Security defaults
+`build` is a type check (`tsc --noEmit`); execution uses `tsx`. Use stable durable session IDs and bounded polling for long checks. Never represent a command timeout, nonzero exit, missing evidence or a completed reasoning request as successful engineering execution.
 
-- Access is limited to named roots in `config/local.json`.
-- Parent-directory traversal outside a root is rejected.
-- Common secret and key files are blocked by default.
-- Known high-risk Windows administration commands are blocked.
-- MCP and GPT Actions use separate secrets.
-- `config/local.json`, tunnel credentials, runtime files and logs are Git-ignored.
-- The server binds only to loopback; Cloudflare Tunnel makes outbound connections from the PC.
+### Real PostgreSQL and node journey gate
 
-Arbitrary PowerShell is a trusted-owner development capability, not a complete OS sandbox.
-## Daily use on this PC
+Provision a **disposable, loopback-only** PostgreSQL instance with user `fs_review` and database `fs_v3_review`. Supply its URL through `FS_REVIEW_PG_URL`, then run:
 
-Normally do nothing after Windows sign-in; Startup launches both watchdogs.
+```sh
+npm run test:postgres
+```
 
-- `Status.cmd` — check local server, Cloudflare, OpenAPI and Actions authentication health.
-- `Start-All.cmd` — start server and Cloudflare watchdogs manually.
-- `Stop-All.cmd` — stop both watchdogs.
-- `Copy-MCP-URL.cmd` — copy the private MCP endpoint URL without displaying its secret.
-- `Copy-Actions-Key.cmd` — copy the GPT Actions Bearer key without displaying it.
-- `Copy-GPT-Instructions.cmd` — copy the Engineering Agent v2 Custom GPT instructions to the clipboard.
+The suite rejects non-local and non-review targets. It creates a randomized schema and removes only that schema afterwards. Tests cover database-backed tenant isolation, lease races, transactional evidence, OAuth enrollment and a real child node executing passing/failing commands. The council opinion in that journey is a deterministic test fixture, not an independent production review.
 
-Never paste either secret into source files, tickets, documentation, knowledge files or chat messages.
+The ordinary suite intentionally does not discover production database credentials. CI and the guarded deployment workflow run the PostgreSQL journey gate separately before deployment mutations.
 
-## GPT Actions setup
+## Trust boundaries
 
-Keep the GPT private while validating it. In the GPT editor, create an Action and import:
+Workspace OAuth operations require both token scopes and the principal's current role. Host-wide credentials and executor lease authority are not delegated to workspace users. Workspace-bound direct roots require an explicit `workspaceId`; processes and browser sessions are isolated by workspace. The legacy operator secret remains a separate privileged boundary and must never be issued as an ordinary workspace credential.
 
-`https://fs.fs-mcp.com/openapi.json`
+Filesystem traversal and in-root symlink/junction escapes are rejected. Trusted shell execution is **not an operating-system sandbox**. Do not host mutually untrusted repositories and service credentials in one unrestricted execution process.
 
-Set Authentication to **API Key → Bearer**. Run `Copy-Actions-Key.cmd` and paste the clipboard
-value into the Action authentication field. Do not put that key into the OpenAPI schema or GPT instructions.
+Expired side-effecting node/worker work requires explicit inspected recovery; caller-supplied `__verification` metadata cannot make an arbitrary command replay-safe. Evidence, accounting and completion are committed under the valid database lease in one transaction.
 
-A custom GPT can use Actions or Apps, not both simultaneously. Actions are unavailable in Pro mode;
-choose a non-Pro GPT-5.6 mode that supports Actions.
+## Repository and deployment discipline
 
-After configuration, validate health, roots, a safe read, a harmless PowerShell echo, Git status,
-and confirm a `git push` attempt is refused.
+Only accepted coherent changes may be committed. Push and deployment require the applicable delivery authorization. Preserve existing work; no reset/clean/force operations or production-destructive changes without explicit approval.
 
-## Reuse on another PC
+The Railway deployment definition is `.railway/railway.ts`. Keep control plane and worker on an exact verified revision. The plan guard rejects unexpected/destructive infrastructure changes and protects Postgres. Do not casually rename the durable `FS_REMOTE_INSTANCE_ID`; inventory existing state first.
 
-Follow `docs/WINDOWS-SETUP.md`. Give every computer a unique Cloudflare hostname and unique pair
-of MCP/Actions secrets, for example `fs.fs-mcp.com`, `laptop.fs-mcp.com`, or `office.fs-mcp.com`.
-macOS packaging will be added only after the Windows path passes the real ChatGPT acceptance test.
-## Engineering Agent v2
+V3, V2B, V2C and legacy V2 remain distinct products/runtimes. On the existing development host, V3 uses 8766, V2B 8767 and legacy V2 8768. Do not collapse their processes, state roots or watchdogs.
 
-The v2 agent layer makes the existing execution capabilities explicit and adds on-demand AI Engineering OS/ECC skills.
+## Key references
 
-New read-only discovery operations are exposed through both MCP and GPT Actions:
-
-- `capabilities` — authoritative runtime capability/policy manifest;
-- `agent_bootstrap` / `agentBootstrap` — engineering-agent operating rules;
-- `list_skills` / `listSkills` — bounded search over the bundled skill registry;
-- `read_skill` / `readSkill` — load a registered `SKILL.md` entrypoint;
-- `list_skill_resources` / `listSkillResources` — list governed support files inside a registered skill;
-- `read_skill_resource` / `readSkillResource` — read one governed support file without escaping that skill directory.
-
-The bundled skill estate is under `agent/skills/`. See `docs/FS-REMOTE-ENGINEERING-AGENT.md` and use `agent/FS-REMOTE-DEVELOPMENT-INSTRUCTIONS.md` as the private Custom GPT instruction source.
-
-For substantial work, the GPT should call `agentBootstrap` and `capabilities` before deciding what it can or cannot do, then load task-appropriate skills on demand. This is especially important because FS Remote already supports PowerShell commands, long-running processes and local Git operations; it must not describe itself as filesystem-only without checking the live capability manifest.
+- `docs/V3-ARCHITECTURE.md` — architecture boundaries.
+- `docs/RAILWAY-DEPLOYMENT.md` — guarded deployment.
+- `docs/reviews/2026-09-29-independent-review-remediation.md` — repair findings and remaining acceptance boundaries.
+- `agent/FS-REMOTE-DEVELOPMENT-INSTRUCTIONS.md` — governed execution and evidence discipline.
+- `docs/FS-DECISION-ARCHITECTURE.md` — deterministic/shadow decision boundary.
+- `docs/archive/README-v2-baseline.md` — historical pre-V3 README; not current operating instructions.

@@ -1,5 +1,19 @@
-import {modelReliability} from './model-health.js';import type {ReviewerModel,BenchmarkDimension} from './reviewer-broker.js';import type {TaskCriticality} from './model-routing-policy.js';
-const DAY=86400000;const weights=(task:string):Record<BenchmarkDimension,number>=>/security|hardening/.test(task)?{coding:.15,reasoning:.2,security:.5,toolUse:.1,longContext:.05}:/test|correct|mobile|flutter|ux/.test(task)?{coding:.5,reasoning:.2,security:.05,toolUse:.15,longContext:.1}:/architect|requirement|adjudicat/.test(task)?{coding:.15,reasoning:.5,security:.1,toolUse:.1,longContext:.15}:{coding:.4,reasoning:.3,security:.1,toolUse:.1,longContext:.1};
-function score(m:ReviewerModel,task:string){const w=weights(task),fresh=(m.benchmarks??[]).filter(b=>Date.now()-Date.parse(b.observedAt)<=90*DAY);let n=0,d=0;for(const[k,v]of Object.entries(w) as [BenchmarkDimension,number][]){const xs=fresh.filter(x=>x.dimension===k);if(xs.length){n+=Math.max(...xs.map(x=>x.score))*v;d+=v}}return d>=.4?n/d:-1}
-export function fallbackChain(catalog:ReviewerModel[],input:{task:string;criticality:TaskCriticality;configuredModelId?:string;paidModelConsent?:boolean;excluded?:string[]}){const excluded=new Set(input.excluded??[]),healthy=catalog.filter(m=>m.healthy&&!excluded.has(m.id));const configured=input.configuredModelId?healthy.find(m=>m.id===input.configuredModelId):undefined;const ranked=(xs:ReviewerModel[])=>xs.map(m=>({m,s:score(m,input.task),r:modelReliability(m.id)})).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s||b.r-a.r).map(x=>x.m);const free=ranked(healthy.filter(m=>m.free));const paid=ranked(healthy.filter(m=>!m.free));const out:ReviewerModel[]=[];if(configured&& (configured.free||input.paidModelConsent||input.criticality!=='outcome_critical'))out.push(configured);const freeByProvider=new Map(free.map(m=>[m.provider,free.filter(x=>x.provider===m.provider)]));const providers=[...freeByProvider.keys()].sort((a,b)=>(freeByProvider.get(b)?.[0]?score(freeByProvider.get(b)![0],input.task):-1)-(freeByProvider.get(a)?.[0]?score(freeByProvider.get(a)![0],input.task):-1));let i=0;while(providers.some(p=>(freeByProvider.get(p)?.length??0)>i)){for(const p of providers){const m=freeByProvider.get(p)?.[i];if(m&&!out.some(x=>x.id===m.id))out.push(m)}i++}if(input.paidModelConsent)for(const m of paid)if(!out.some(x=>x.id===m.id))out.push(m);return out}
-export function diverseCouncilAssignments(catalog:ReviewerModel[],roles:string[]){const free=catalog.filter(m=>m.healthy&&m.free),usedProviders=new Map<string,number>(),usedModels=new Set<string>();return roles.map(role=>{const ranked=fallbackChain(free,{task:`review:${role}`,criticality:'outcome_critical'});const pick=[...ranked].sort((a,b)=>(usedProviders.get(a.provider)??0)-(usedProviders.get(b.provider)??0)||(usedModels.has(a.id)?1:0)-(usedModels.has(b.id)?1:0))[0];if(!pick)return{role,model:null};usedProviders.set(pick.provider,(usedProviders.get(pick.provider)??0)+1);usedModels.add(pick.id);return{role,model:pick}})}
+import type {ReviewerModel} from './reviewer-broker.js';
+import type {TaskCriticality} from './model-routing-policy.js';
+import {routeModel} from './model-routing-policy.js';
+import {benchmarkRank,rankedModels,modelKey,matchesModel} from './benchmark-ranking.js';
+import {reasoningFailure} from './reasoning-errors.js';
+export const freeFallbackRank=benchmarkRank;
+export function freeFallbackChain(catalog:ReviewerModel[],task:string,exclude:string[]=[]){return rankedModels(catalog.filter(m=>m.free&&!exclude.some(id=>matchesModel(m,id))),task)}
+export function isFailoverEligible(error:unknown){return reasoningFailure(error).fallbackAllowed}
+export function fallbackChain(catalog:ReviewerModel[],input:{task:string;criticality:TaskCriticality;configuredModelId?:string;paidModelConsent?:boolean;excluded?:string[]}){
+ const eligible=catalog.filter(m=>!(input.excluded??[]).some(id=>matchesModel(m,id))),decision=routeModel(eligible,input),out:ReviewerModel[]=[];
+ if(decision.model)out.push(decision.model);
+ for(const {model} of freeFallbackChain(eligible,input.task))if(!out.some(m=>modelKey(m)===modelKey(model)))out.push(model);
+ // General consent permits qualified paid alternatives, but never places them ahead of free recovery.
+ if(input.paidModelConsent===true)for(const {model} of rankedModels(eligible.filter(m=>!m.free),input.task))if(!out.some(m=>modelKey(m)===modelKey(model)))out.push(model);
+ return out;
+}
+export function diverseCouncilAssignments(catalog:ReviewerModel[],roles:string[]){
+ const used=new Set<string>();return roles.map(role=>{const ranked=freeFallbackChain(catalog,`review:${role}`),pick=ranked.find(x=>!used.has(modelKey(x.model)))??ranked[0];const reusedModel=!!pick&&used.has(modelKey(pick.model));if(pick)used.add(modelKey(pick.model));return{role,model:pick?.model??null,reusedModel}});
+}

@@ -25,3 +25,34 @@ jobs:
         run: npm run node:doctor
       - name: Platform execution smoke
         run: node --import tsx --test tests/platform-contract.test.ts tests/process-shell.test.ts tests/processes.test.ts tests/server.integration.test.ts
+
+  postgres-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: fs_review
+          POSTGRES_PASSWORD: fixture-review-only
+          POSTGRES_DB: fs_v3_review
+        ports:
+          - 55439:5432
+        options: >-
+          --health-cmd "pg_isready -U fs_review -d fs_v3_review"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      FS_REVIEW_PG_URL: postgresql://fs_review:fixture-review-only@127.0.0.1:55439/fs_v3_review
+      FS_REMOTE_INSTANCE_ID: isolated-ci-review
+      FS_REMOTE_STATE_ROOT: /tmp/fs-v3-review-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:postgres

@@ -1,3 +1,9 @@
+import crypto from 'node:crypto';
+import {assertRuntimeDurability} from './runtime-durability.js';
+import {WorkerRuntimeStore} from './worker-runtime-store.js';
+import {deploymentIdentity} from './deployment-identity.js';
+import {SERVICE_VERSION} from './version.js';
+import {currentPlanContext} from './plan-context.js';
 import path from 'node:path';
 import { runtimeIdentity } from './runtime.js';
 import { WorkerQueue } from './workers.js';
@@ -19,6 +25,7 @@ import { VerificationDispatcher } from './verification-dispatch.js';
 import { HostedGitExecutor } from './hosted-git-executor.js';
 import { migrateMultiUserSchema } from './multi-user-schema.js';
 
+assertRuntimeDurability();
 await migrateDatabase();
 await migrateMultiUserSchema();
 
@@ -32,9 +39,16 @@ const executor = new PersistentExecutor(
   Number(process.env.FS_REMOTE_WORKER_POLL_MS ?? 2000),
   Number(process.env.FS_REMOTE_WORKER_LEASE_MS ?? 120000),
 );
-const orchestrator = new MissionOrchestrator(missions, queue);
+const orchestrator = new MissionOrchestrator(missions, queue, path.join(identity.stateRoot,'decision-learning'));
 const supervisor = new ContinuousEngineeringSupervisor(missions, orchestrator, Number(process.env.FS_REMOTE_SUPERVISOR_POLL_MS ?? 1500));
 const reviewerCatalog = new ReviewerCatalogStore();
+const workerRuntime = new WorkerRuntimeStore('autonomous-worker');
+const workerSessionId = crypto.randomUUID();
+const workerId = executor.capabilities().workerId;
+await workerRuntime.start({sessionId:workerSessionId,workerId,serviceVersion:SERVICE_VERSION,deploymentRevision:deploymentIdentity().revision,metadata:{instanceId:identity.instanceId}});
+const requestedWorkerHeartbeatMs=Number(process.env.FS_REMOTE_WORKER_HEARTBEAT_MS??10000);
+const workerHeartbeatMs=Number.isFinite(requestedWorkerHeartbeatMs)?Math.max(250,requestedWorkerHeartbeatMs):10000;
+const workerHeartbeat=setInterval(()=>void workerRuntime.heartbeat(workerSessionId,workerId).catch(()=>console.error('[fs-remote-worker] worker_heartbeat_failed')),workerHeartbeatMs);
 
 executor.register('hosted_git', async item => {
   const result = await new HostedGitExecutor().execute(item.payload as any);
@@ -71,17 +85,11 @@ executor.register('reasoning', async item => {
   });
   try {
     const plan = parseActionPlan(out.text);
+    const freshMission = await missions.get(mission.id);
     const evidence = await missions.evidence(mission.id);
-    const step = mission.steps.find(s => s.id === item.stepId);
-    const promptContext = JSON.parse(String(item.payload.prompt ?? '{}')) as any;
-    const expected = {
-      missionId: mission.id,
-      goal: mission.goal,
-      step,
-      metadata: mission.metadata,
-      evidence: evidence.filter(e => e.stepId === item.stepId),
-      quality: promptContext.quality,
-    };
+    const step = freshMission.steps.find(s => s.id === item.stepId);
+    if(!step||freshMission.status!=='running')throw new Error('Mission is no longer executable.');
+    const expected = currentPlanContext(freshMission,step,evidence);
     const dispatch = await new PlanDispatcher().dispatch(mission.id, item.stepId, plan, expected, mission.workspaceId);
     return {
       result: { provider: out.provider, model: out.model, text: out.text, requestId: out.requestId, plan, dispatch },
@@ -105,7 +113,7 @@ executor.register('verification_repeat', async item => {
   if (!recipe) return { result: { verified: false, priorEvidenceId: prior.id }, evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'Prior evidence did not contain an executable verification recipe; pass^k cannot be claimed.', data: { priorEvidenceId: prior.id, gate: item.payload.gate, run: item.payload.run } }] };
   const md:any=mission.metadata??{},nodeId=String(md.executionNodeId??''),project=String(md.executionProject??mission.cwd??'');
   if (!nodeId) return { result: { verified: false, recipe, requiresNodeExecution: true }, evidence: [{ kind: 'reliability_verification', source: 'persistent-executor', status: 'unknown', summary: 'Executable verification recipe is ready but no governed execution node is assigned to this mission.', data: { recipe, gate: item.payload.gate, run: item.payload.run } }] };
-  const job=await new VerificationDispatcher().dispatch({missionId:mission.id,stepId:item.stepId,nodeId,project,recipe,run:Number(item.payload.run??1),gate:item.payload.gate});
+  const job=await new VerificationDispatcher().dispatch({missionId:mission.id,stepId:item.stepId,nodeId,project,recipe,run:Number(item.payload.run??1),gate:item.payload.gate,workspaceId:mission.workspaceId});
   return { result: { verified: false, recipe, nodeJob: job, awaitingNodeExecution: true }, evidence: [{ kind: 'reliability_verification_dispatch', source: 'persistent-executor', status: 'unknown', summary: 'Independent verification recipe dispatched to governed execution node.', data: { recipe, gate: item.payload.gate, run: item.payload.run, nodeJob: job } }] };
 });
 
@@ -192,20 +200,21 @@ async function ensureReviewerReadiness(mission:any) {
 async function scanMissions() {
   for (const mission of await missions.list()) {
     if (!['planned','running','verifying'].includes(mission.status) || activeMissions.has(mission.id)) continue;
-    await ensureReviewerReadiness(mission);
-    const run = supervisor.runMission(mission.id, { maxCycles: Number(process.env.FS_REMOTE_SUPERVISOR_MAX_CYCLES ?? 10000) })
+    // Reserve this mission before asynchronous preparation so overlapping scans cannot double-start it.
+    const run = Promise.resolve().then(() => ensureReviewerReadiness(mission)).then(() => supervisor.runMission(mission.id, { maxCycles: Number(process.env.FS_REMOTE_SUPERVISOR_MAX_CYCLES ?? 10000) }))
       .catch(async error => {
-        await missions.addEvidence({ missionId: mission.id, stepId: mission.currentStepId, kind: 'supervisor', source: 'continuous-factory', status: 'fail', summary: `Continuous supervisor stopped unexpectedly: ${error instanceof Error ? error.message : String(error)}` });
+        try { await missions.addEvidence({ missionId: mission.id, workspaceId: mission.workspaceId, stepId: mission.currentStepId, kind: 'supervisor', source: 'continuous-factory', status: 'fail', summary: 'Continuous supervisor preparation or execution failed.', data: { classification: 'supervisor_failure' } }); } catch { console.error('[fs-remote-worker] supervisor_failure_evidence_unavailable'); }
       })
       .finally(() => activeMissions.delete(mission.id));
     activeMissions.set(mission.id, run);
   }
 }
-const scanner = setInterval(() => void scanMissions(), Number(process.env.FS_REMOTE_SUPERVISOR_SCAN_MS ?? 3000));
-void scanMissions();
+const scanner = setInterval(() => void scanMissions().catch(() => console.error('[fs-remote-worker] mission_scan_failed')), Number(process.env.FS_REMOTE_SUPERVISOR_SCAN_MS ?? 3000));
+void scanMissions().catch(() => console.error('[fs-remote-worker] mission_scan_failed'));
 
 const stop = async () => {
   clearInterval(scanner);
+  clearInterval(workerHeartbeat);
   supervisor.stop();
   await Promise.allSettled(activeMissions.values());
   await executor.stop();

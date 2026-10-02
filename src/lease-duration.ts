@@ -1,0 +1,1 @@
+export function assertLeaseDuration(value:number){if(!Number.isSafeInteger(value)||value<=0||value>900000)throw new Error('Lease duration must be a positive whole number of milliseconds not exceeding 900000.');return value}
