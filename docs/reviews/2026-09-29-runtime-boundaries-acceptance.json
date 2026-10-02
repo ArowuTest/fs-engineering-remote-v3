@@ -1,0 +1,181 @@
+{
+  "schemaVersion": "fs.v3.scoped-source-acceptance.v1",
+  "observedAt": "2026-09-29T22:20:25.763732+00:00",
+  "base": "65fd28e2f9c8c6e34bbf762f52aabdd7d6d6f578",
+  "branch": "fix/v3-independent-review-20260929",
+  "scopedSourceAccepted": true,
+  "entireV3CandidateAccepted": false,
+  "scopes": [
+    "Hosted database-presence startup guard and shared health/readiness durability predicate.",
+    "Single-flight in-process mission scheduling, reservation cleanup and fixed-label failure evidence.",
+    "Literal replacement preservation in edit/patch/composite methods; no new claim that the unchanged filesystem protocol eliminates every race."
+  ],
+  "runtimeReview": {
+    "recordFile": "v3-runtime-boundaries-resumed-1790719674540-result.json",
+    "councilId": "council-1790719731573-9aa195",
+    "packetHash": "0c66d5f5709b75e848925c8d586c20f4bf985aed0152ee39d75fd9fc981450d9",
+    "sourceHash": "358d927ac76f8e53ac91f3afcb152a7853a079135cdd1cce1bb7b211c4192ff7",
+    "manifest": [
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "src/runtime-durability.ts",
+        "sha256": "acbe41fb70d9c5df632bfc6986f89f110ba26717a40f836af9c7bbc8a170037a",
+        "scope": "Full source"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "src/index.ts",
+        "sha256": "df12d7cbd83bcd4fb4a35d1005b5b0fe71286233004541c555b0f11a6451f5a3",
+        "scope": "Full source"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "tests/hosted-durability.test.ts",
+        "sha256": "170bf5b405c33f608983c29e7c34e803a6f5b2f32951ffdcbc8e15a65db0c02a",
+        "scope": "Full source"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "tests/mission-scan-concurrency.test.ts",
+        "sha256": "c1e76e4f5edec9be1f2572e362b46bc608f99546758aac7517e4db2c4df4fa3f",
+        "scope": "Full source"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "src/executor-main.ts",
+        "sha256": "53e746542ee0ce5ce72cbee14c87a0be366ae9cfb460205c2a9ca1bc59a3ee20",
+        "scope": "Entrypoint order and mission scanner only"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "src/http.ts",
+        "sha256": "d9c42198d35c39a4ca38bfe41eadc6b9d3e42a19deb682a2634e7fabe78bb922",
+        "scope": "Durability predicate reuse in health/readiness only"
+      }
+    ],
+    "adjudication": {
+      "verdict": "approve",
+      "summary": "No source-bound defects in the supplied durability guard, entrypoint ordering, mission single-flight scanner, or health/readiness predicate reuse. Hosted/Railway markers fail closed on missing/blank DATABASE_URL before ownership, migrations, listeners, and job loops; unknown FS_REMOTE_HOSTED values throw; unmarked local mode is unchanged. The scanner reserves synchronously before async readiness, records fixed workspace-scoped failure evidence, and clears reservations without unhandled rejection.",
+      "findings": [],
+      "requiredActions": [],
+      "factualBasis": [
+        "src/runtime-durability.ts requiresDurableState treats only '', 0, false, 1, true as valid FS_REMOTE_HOSTED values and throws INVALID_HOSTED_FLAG otherwise; durable mode is 1/true or any trimmed RAILWAY_ENVIRONMENT, RAILWAY_ENVIRONMENT_ID, or RAILWAY_PROJECT_ID.",
+        "assertRuntimeDurability throws DURABLE_DATABASE_REQUIRED when durable mode is required and DATABASE_URL is missing or whitespace-only; it does not probe database reachability.",
+        "src/index.ts and the worker entrypoint both call assertRuntimeDurability() before loadConfig/ownership/migrations/listeners or identity/queue/mission loops.",
+        "scanMissions skips ids already in activeMissions, then constructs the run promise and activeMissions.set before any await, so a second in-process scan cannot interleave a duplicate supervisor for the same mission.",
+        "Preparation/execution failures add evidence with fixed summary and classification supervisor_failure, workspaceId from the mission, no exception text, and finally delete the reservation; scanMissions rejections are caught at the interval/initial call.",
+        "Control plane, worker, and health/readiness import the same requiresDurableState/assertRuntimeDurability helpers. Tests spawn index.ts and executor-main.ts with blank DATABASE_URL plus hosted/Railway markers and extract the production scanner for overlap and failure fixtures."
+      ],
+      "remainingUncertainty": [
+        "http.ts and executor-main.ts are supplied only as scoped excerpts, so handlers outside the durability/scanner delta were not fully inspected.",
+        "This packet contains test source and prior red-state notes, not a fresh executed pass/fail log from this adjudication.",
+        "Worker still constructs filesystem MissionManager/WorkerQueue paths after the DATABASE_URL guard; whether hosted state is fully non-file after a present URL is outside this gate."
+      ]
+    },
+    "provenance": [
+      {
+        "type": "new-independent-response",
+        "callId": "27e6a3c4-9895-41d5-af86-893942b403d6",
+        "group": "v3-runtime-boundaries",
+        "task": "review:correctness",
+        "model": "openai/gpt-5.5"
+      },
+      {
+        "type": "reused_completed_independent_response",
+        "sourceCouncilId": "council-1790719612462-742df1",
+        "group": "v3-runtime-boundaries",
+        "task": "review:security",
+        "model": "z-ai/glm-5.3",
+        "sourceHash": "358d927ac76f8e53ac91f3afcb152a7853a079135cdd1cce1bb7b211c4192ff7",
+        "textHash": "26baa757c5592df536171b62563b06fd8a7751823518cc3817ca76c76e637053"
+      },
+      {
+        "type": "new-independent-response",
+        "callId": "bd77ea06-860e-441a-a1ff-691d3ca0cdb3",
+        "group": "v3-runtime-boundaries",
+        "task": "review:adjudication",
+        "model": "x-ai/grok-4.6"
+      }
+    ]
+  },
+  "literalReview": {
+    "councilId": "council-1790719189859-04ffee",
+    "packetHash": "d7d3ef23571845cf43d29f7823c39601f93073d0e8a8b93f44df8ec253b3f6bd",
+    "sourceHash": "5387e837b5a15054d50d0cc30d639bfc52e180db6d7c48cf50b51d343d56b03d",
+    "manifest": [
+      {
+        "root": "C:\\Users\\sanus\\Documents\\FS-Remote-MCP-V2B\\.agent\\worktrees\\model-routing-20260929",
+        "path": "src/operations.ts",
+        "sha256": "fa9a255f34837639534ff5830194e8eeb07edbf346fdd5f266edd5fcf4e9be65",
+        "scope": "Only explicitly extracted methods and literal-replacement delta"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "src/operations.ts",
+        "sha256": "a924569352e3be9601e4f0f2cf9cf5cbc6b256c5d7a0032bbba0f0ce8253b45a",
+        "scope": "Only explicitly extracted methods and literal-replacement delta"
+      },
+      {
+        "root": "C:\\Users\\sanus\\Documents\\FS-Remote-MCP-V2B\\.agent\\worktrees\\model-routing-20260929",
+        "path": "tests/literal-edit-replacement.test.ts",
+        "sha256": "c35e2742ac4591403a9bd523193f7d9bf9cce3432fdaff711d48a898e55d6f24",
+        "scope": "Full test source"
+      },
+      {
+        "root": "C:/Users/sanus/Documents/FS-Remote-MCP-v3/.agent/worktrees/review-fixes-20260929",
+        "path": "tests/literal-bounded-edit.test.ts",
+        "sha256": "00db1be76cebe152d2f930f2426f67fd036862411d2711b3f40445edb0512bb3",
+        "scope": "Full test source"
+      }
+    ]
+  },
+  "verification": {
+    "sessionId": "exec-mun8hg3b-fd526105",
+    "exitCode": 0,
+    "typecheck": "passed",
+    "fullSuite": {
+      "counts": {
+        "tests": 597,
+        "pass": 597,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "sha256": "0949f49a68620340d30d3327230da1b7615d0362fb123d8dfa2f6964558a160e",
+      "path": ".agent\\runtime-accepted-final-tests.log"
+    },
+    "postgres": {
+      "counts": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "sha256": "3616f0ca85f07a6417e1c19c8d3042d9c40e9c69fcda97e4778a2ab5b59f519e",
+      "path": ".agent\\ownership-postgres-tests.log"
+    },
+    "healthContractNote": "An old source-regex test asserted that environment checks must be inline in http.ts. Replaced with actual Fastify health/readiness behavior across hosted markers, preserving fail-closed assertions. It does not alter reviewed production source."
+  },
+  "paidReview": {
+    "assistantCeilingUsd": 12,
+    "providerReportedUsd": 7.6057787022,
+    "maximumLiabilityUsd": 10.1824862522,
+    "includesPriorFailedCalls": true
+  },
+  "integration": {
+    "v2bMain": "a4d1042a004b33098d4a439e4427d522a0c3e5bb",
+    "v2bAcceptedMerged": true,
+    "v2bRestarted": false,
+    "v3Merged": false,
+    "v3Pushed": false,
+    "v3Deployed": false,
+    "productionDatabaseWrites": false
+  },
+  "remainingAcceptance": [
+    "Adjudicate and close original V3 persistence, node, authorization and mission-execution source reviews against corrected current code.",
+    "Review V3-specific integrations and additional catalogue preflight path; identical shared module hashes alone are not whole-product acceptance.",
+    "Preserve legacy v3-staging history and absent-parent records; rehearse backup/restore before any namespace migration.",
+    "Prove deployed recovery, tenant/credential boundaries, operator visibility and alerts, repeatable onboarding, and actual Linux/macOS lifecycle before external launch."
+  ]
+}

@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "fs.v3.persistence-continuation.v1",
+  "observedAt": "2026-09-29T23:12:40.704696+00:00",
+  "base": "65fd28e2f9c8c6e34bbf762f52aabdd7d6d6f578",
+  "branch": "fix/v3-independent-review-20260929",
+  "scope": "PostgreSQL persistence and lease boundaries; the supplied WorkerQueue save/enqueue/cancel excerpts; and Operations publicWorkView/worker get/list serialization. Not the full filesystem facade, API authorization, workspace quota admission, mission orchestration or whole V3 candidate.",
+  "sourceAccepted": true,
+  "wholeV3CandidateAccepted": false,
+  "repairs": [
+    "Existing recovery_required survives cancellation in both local and PostgreSQL queues; queued/safe cancellation retains its terminal behavior.",
+    "Generic saveWork validates parent mission and step inside INSERT SELECT, inherits parent workspace, rejects foreign-instance/workspace creation and rejects same-id updates from another mission, step or kind.",
+    "Snapshot save is limited to never-started preflight work; it cannot overwrite claimed, expired, uncertain or retried work, or forge already-executed work. Dedicated lease/recovery transitions remain available.",
+    "Operations worker list/get always strips existing lease tokens, including unscoped clients. Explicit claim still issues its own credential and legitimate owned completion still works."
+  ],
+  "gate": {
+    "sessionId": "exec-muna8w5k-cec4b4cd",
+    "typecheck": "passed",
+    "logs": {
+      "main": {
+        "path": ".agent/lease-final-full-tests.log",
+        "sha256": "2d9703fd64325a6ce955d977d3b02563ec69298f576531df828ffa566eb5c857",
+        "tests": 600,
+        "pass": 600,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "postgres": {
+        "path": ".agent/lease-read-green.log",
+        "sha256": "726b8aefe28e4c0e8331dcd7215e0facda0dea87e1e31925cf4521ec4e4b008a",
+        "tests": 52,
+        "pass": 52,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "targeted": {
+        "path": ".agent/lease-final-targeted.log",
+        "sha256": "4c9fe48847d1527617fa860c9240829be83d1b6196bb0ec3cfa9574fd50ecbd7",
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "cancellationRedLocal": {
+        "path": ".agent/cancellation-local-red.log",
+        "sha256": "19e89e32ae6a82ab338850b1dcec1907d7059d591289dddf1f00df2f1753fd93",
+        "tests": 3,
+        "pass": 1,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "cancellationRedPostgres": {
+        "path": ".agent/cancellation-postgres-red.log",
+        "sha256": "ee9b505ede95d378a440515ae8c892def024d4eb18233f2efbd6ae443b50859f",
+        "tests": 35,
+        "pass": 32,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "parentRedPostgres": {
+        "path": ".agent/save-parent-red.log",
+        "sha256": "500f7b0e52f6628c39bdac27931bbca18ca8da92ba251458fc9245b6dc9cabae",
+        "tests": 44,
+        "pass": 36,
+        "fail": 8,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "leaseReadRedPostgres": {
+        "path": ".agent/lease-read-red.log",
+        "sha256": "979531fdcbf1dc4678b4f3f687af3d1ee409594ed292e4e7c30151b4a61bf3d5",
+        "tests": 52,
+        "pass": 44,
+        "fail": 8,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "redSessions": {
+    "cancellation": "exec-mun9f1ay-9bd404ad",
+    "parentSave": "exec-mun9rwjp-93329616",
+    "leaseAndClientReads": "exec-muna2pbk-9eeb1cb9"
+  },
+  "review": {
+    "file": "C:\\Users\\sanus\\Documents\\FS-Remote-MCP-V2B\\.agent\\worktrees\\model-routing-20260929\\.agent\\paid-source-review-20260929\\persistence-lease-read-closure-result.json",
+    "sessionId": "exec-munaffh7-c839678b",
+    "councilId": "council-1790723413839-2ed89e",
+    "packetHash": "4ef8d33c11d8454e4fbd23654a0de9b14ddc31a0045da351bd5d09e3353e8cb0",
+    "sourceHash": "67865a194a11d9197f405126396c3465c32802a3b2180e7100a057589498ac66",
+    "verdict": "approve",
+    "adjudication": {
+      "verdict": "approve",
+      "summary": "No unresolved in-scope contract defects. PostgreSQL snapshot fencing, parent/identity immutability, owned-lease clock fencing, completion+evidence+usage transaction, cancellation uncertainty, token redaction on Operations get/list, bounded leases, and policy-disabled optional execution match the persistence-lease-read-closure acceptance set.",
+      "findings": [],
+      "requiredActions": [],
+      "factualBasis": [
+        "saveWork rejects leased/completed/recovery payloads and non-zero attempts or __leaseToken, and the upsert WHERE requires existing status='queued', attempts=0, null lease, and unchanged mission/step/kind/instance/workspace.",
+        "claim/heartbeat/complete/fail/recover/cancel use owner+payload token and clock_timestamp expiry; completeWorkWithEvidence inserts evidence, AccountingStore.record on the same client, and completion in one transaction.",
+        "cancelWork keeps recovery_required for recovery_required or non-replay-safe leased work; retryWork does not reset attempts; claim stores __leasedAt and heartbeat does not overwrite it; assertLeaseDuration caps leases at 900000ms.",
+        "operations publicWorkView strips lease.token and payload.__leaseToken on get/list; claim returns the worker credential; workRow still reads __leaseToken for owned completion. READ-LEASE-01 and SAVE-LEASE/PARENT tests plus packet test evidence (52 PG tests pass) support this.",
+        "optionalExecutionRelease reports enabled:false / policy-disabled for hosted and sandbox."
+      ],
+      "remainingUncertainty": [
+        "File-backed queue facade, API authorization beyond the labelled operations/workers excerpts, migrations, and full V3 launch are out of scope.",
+        "Workspace quota coverage, admission races, and node_jobs vs work_items are explicitly unresolved and not certified.",
+        "The packet does not include a passing full 600-test main gate; this step cannot authorize a whole-candidate commit.",
+        "operations.ts and workers.ts were only supporting excerpts, not whole-file inspection."
+      ]
+    },
+    "findings": [],
+    "failedDimensions": []
+  },
+  "manifest": [
+    {
+      "path": "src/pg-state.ts",
+      "sha256": "4f9830f2698ed7abc7292abc1abd79b215c6ad2f2f8b3d058a9193e01dfa8f59",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/supervisor-lease.ts",
+      "sha256": "2e65640caa131239d21b681edc1d8a349404d6343f32271facb2fd92a062507f",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/lease-duration.ts",
+      "sha256": "a9a3509ffb0d18131d807927af2adcd2fe17adc68384d01d1756ac0f92c40f31",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/worker-retry-policy.ts",
+      "sha256": "bc9dc83b55fb17b10e22c891f01a8e8cedd04fb4e91d8cf487e662d7ca8c2192",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/accounting-store.ts",
+      "sha256": "157607ec8c7fef0d2ae500701c4cc7124922631c0ccfa290ad81e26d00f71419",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/execution-release.ts",
+      "sha256": "c21844bcfd9174bdfc131966df22ae86e8aca068a06d9e459bf72f62142e6f47",
+      "kind": "complete-source"
+    },
+    {
+      "path": "tests/postgres/work-save-parent.integration.ts",
+      "sha256": "a1ed6b3d4a06d9fdacb4f314b9b3cde373f6e0e71e5fd90f81e040f21d1cd0fb",
+      "kind": "complete-source"
+    },
+    {
+      "path": "src/operations.ts",
+      "sha256": "b93d3b6864d3f161203858297a308e2a08396cde62ef0626d517140179dee5b2",
+      "kind": "supporting-context-lines-35-35"
+    },
+    {
+      "path": "src/operations.ts",
+      "sha256": "b93d3b6864d3f161203858297a308e2a08396cde62ef0626d517140179dee5b2",
+      "kind": "supporting-context-lines-266-266"
+    },
+    {
+      "path": "src/workers.ts",
+      "sha256": "987b62f5b51c41bac5653499d419b5cf4ce76d5c91d8f297d17374640e6b2630",
+      "kind": "supporting-context-lines-9-10"
+    },
+    {
+      "path": "src/workers.ts",
+      "sha256": "987b62f5b51c41bac5653499d419b5cf4ce76d5c91d8f297d17374640e6b2630",
+      "kind": "supporting-context-lines-27-27"
+    }
+  ],
+  "changedThisTurn": [
+    {
+      "path": "src/pg-state.ts",
+      "sha256": "4f9830f2698ed7abc7292abc1abd79b215c6ad2f2f8b3d058a9193e01dfa8f59"
+    },
+    {
+      "path": "src/workers.ts",
+      "sha256": "987b62f5b51c41bac5653499d419b5cf4ce76d5c91d8f297d17374640e6b2630"
+    },
+    {
+      "path": "src/operations.ts",
+      "sha256": "b93d3b6864d3f161203858297a308e2a08396cde62ef0626d517140179dee5b2"
+    },
+    {
+      "path": "tests/recovery-cancellation.test.ts",
+      "sha256": "068407f3b8cead0d7c6a90b482c7a158bcb339ea5e1868d8ab0b097aac067ed1"
+    },
+    {
+      "path": "tests/postgres/recovery-cancellation.integration.ts",
+      "sha256": "a48a7690f3845734cf4746391b012ac15df8e861e7e8043e20169059eff90071"
+    },
+    {
+      "path": "tests/postgres/work-save-parent.integration.ts",
+      "sha256": "a1ed6b3d4a06d9fdacb4f314b9b3cde373f6e0e71e5fd90f81e040f21d1cd0fb"
+    }
+  ],
+  "budget": {
+    "capUsd": 12,
+    "reportedUsd": 9.07850037127,
+    "maximumLiabilityUsd": 11.65520792127,
+    "uncertainReservationsRetained": true
+  },
+  "delivery": {
+    "staged": false,
+    "committed": false,
+    "merged": false,
+    "pushed": false,
+    "productionDatabaseWrites": false,
+    "runtimeRestarted": false
+  },
+  "remaining": [
+    "Entire original V3 candidate source acceptance remains required before integration.",
+    "Filesystem facade parent/concurrency/atomic-completion findings are not cleared by the hosted PostgreSQL startup guard.",
+    "Node, authorization and orchestration/evidence source review groups remain separate.",
+    "Production namespace reconciliation, restore/rollback drills, observability, deployed tenancy and actual cross-platform acceptance remain open.",
+    "Workspace quota coverage and atomic admission across execution targets remain an open execution-routing acceptance group. The current persistence review does not certify those quotas."
+  ]
+}

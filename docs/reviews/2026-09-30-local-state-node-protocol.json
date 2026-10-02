@@ -1,0 +1,263 @@
+{
+  "schemaVersion": "fs-remote.repair-progress.v1",
+  "observedAt": "2026-09-30T10:47:51.180650+00:00",
+  "branch": "fix/v3-independent-review-20260929",
+  "head": "65fd28e2f9c8c6e34bbf762f52aabdd7d6d6f578",
+  "stagedFiles": [],
+  "verification": {
+    "sessionId": "exec-munz5y8t-fdb33b11",
+    "typecheck": "passed",
+    "main": {
+      "path": ".agent/node-final-full-tests.log",
+      "sha256": "427ca56e360e6f43514202c05573fb792b7e5e2c16d331e1c701a359deedfded",
+      "tests": 659,
+      "pass": 659,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "postgres": {
+      "path": ".agent/node-final-postgres.log",
+      "sha256": "d5442954e704e77d675ea3385ab186abc11f1b85eb7031b95bde7bb96821a113",
+      "tests": 52,
+      "pass": 52,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "nodeTargeted": {
+      "path": ".agent/node-admin-green.log",
+      "sha256": "a655db94fe669cde3218f5935e53bb158f17a9bd66381d96d4a449ab83880f12",
+      "tests": 34,
+      "pass": 34,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "localTargeted": {
+      "path": ".agent/local-structure-green.log",
+      "sha256": "5afadb3434575e39f6d8334672d2206e3f21dde6ba81dc897322812bdada8d8e",
+      "tests": 40,
+      "pass": 40,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  "newTests": {
+    "localParent": 30,
+    "nodeSelfService": 16,
+    "nodeAdmin": 13,
+    "total": 59
+  },
+  "sourceManifest": [
+    {
+      "path": "src/local-mission-parent.ts",
+      "sha256": "eada59451f5f4393a038a52f5b7147cc300870c91c609594677a4ef1ccdfef62"
+    },
+    {
+      "path": "src/missions.ts",
+      "sha256": "f8e55245993bb8351716e80bd882e0fd962e10bd44026825d111290cb0413d8e"
+    },
+    {
+      "path": "src/workers.ts",
+      "sha256": "ab544d32fc2a709310096976be0b28985158ae4491c1048bcc82454a7b5b3aca"
+    },
+    {
+      "path": "src/handoff.ts",
+      "sha256": "f514968df0e4fff39ae011d0206e4e1a1c8165c616954b14c5e3143cacf8c51b"
+    },
+    {
+      "path": "src/node-protocol-error.ts",
+      "sha256": "cc5c375b9636c2618335ef7296280e81aa113433387e39bfbd805767e92444cf"
+    },
+    {
+      "path": "src/node-http.ts",
+      "sha256": "d206928da1f0bf61273b741d59d6f254eb0914c2f67dd2e5c422ff4fd35b1c4c"
+    },
+    {
+      "path": "src/nodes.ts",
+      "sha256": "dfc1c8ccf09b819c3c82d0519b627493b379e3a99724e58902431f8a42dfb340"
+    },
+    {
+      "path": "tests/local-parent-integrity.test.ts",
+      "sha256": "c227083023646268a74cfb25686174d2eaee4f5f9c67c3ad1263d3312f208b5e"
+    },
+    {
+      "path": "tests/node-http-failures.test.ts",
+      "sha256": "2da42450f3ed4ab649dcd34e84feffe9ab83ce10fad0b70aa378a074b1c5f4f9"
+    },
+    {
+      "path": "tests/node-admin-failures.test.ts",
+      "sha256": "9b3432cbf65f0d8d024117902d365e12b8bbb0a419b59d8b6bb2d9801d37a07a"
+    },
+    {
+      "path": "tests/workers.test.ts",
+      "sha256": "9d1f04fa19ec821885bfac2d9eb96492caf378230e2c231129cd0239bf9352fa"
+    },
+    {
+      "path": "tests/worker-tenant.test.ts",
+      "sha256": "aab8d4ffcd27f453c617c23b171a104446ab1887ab5b265d99a3580f2f27e2d5"
+    },
+    {
+      "path": "tests/executor.test.ts",
+      "sha256": "2b1df2b5034be0518a83b3232a0cd2042ec47fc96c5a0de3d947a92eb39422fe"
+    },
+    {
+      "path": "tests/review-persistence-regressions.test.ts",
+      "sha256": "ced60ecfb4b6a86423ff427b048da21c3b05e95d3ce10c67968d2e89df6821af"
+    }
+  ],
+  "reviews": [
+    {
+      "group": "node-http",
+      "record": ".agent\\local-node-review-20260930\\node-http-free2-result.json",
+      "sourceHash": "ea82d17ab641a03f6916a025ce504bacd19065cd9ce5ee4a5c9742e259d27e49",
+      "manifestMatches": true,
+      "approved": false,
+      "councilId": "council-1790765074646-4a7b62",
+      "failedDimensions": [
+        "correctness:chunk-1",
+        "security:chunk-1",
+        "adjudication:provider_failure"
+      ],
+      "adjudication": {
+        "verdict": "block",
+        "summary": "Required adjudication did not complete; completed reviewer evidence is preserved without approval.",
+        "findings": [
+          {
+            "id": "correctness-chunk-1-failure",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "reason": "Required post-review stage failed."
+          },
+          {
+            "id": "security-chunk-1-failure",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "reason": "Required post-review stage failed."
+          }
+        ],
+        "requiredActions": [
+          "Resume a source-bound independent adjudication before acceptance."
+        ],
+        "factualBasis": [
+          "Completed reviewer responses and attempts are preserved in this result."
+        ],
+        "remainingUncertainty": [
+          "adjudication:provider_failure"
+        ]
+      },
+      "findings": [
+        {
+          "id": "correctness-chunk-1-failure",
+          "status": "uncertain",
+          "severity": "high",
+          "location": null,
+          "claim": "Required reviewer evidence chunk chunk-1 did not complete."
+        },
+        {
+          "id": "security-chunk-1-failure",
+          "status": "uncertain",
+          "severity": "high",
+          "location": null,
+          "claim": "Required reviewer evidence chunk chunk-1 did not complete."
+        }
+      ]
+    },
+    {
+      "group": "local-parent",
+      "record": ".agent\\local-node-review-20260930\\local-parent-free2-result.json",
+      "sourceHash": "b5c7bb6be8ca7c9e71997558b8431dfa2004513c7df7e58883b269bb0ed0431b",
+      "manifestMatches": true,
+      "approved": false,
+      "councilId": "council-1790765074715-38f41a",
+      "failedDimensions": [
+        "correctness:chunk-1",
+        "security:chunk-1",
+        "adjudication:provider_failure"
+      ],
+      "adjudication": {
+        "verdict": "block",
+        "summary": "Required adjudication did not complete; completed reviewer evidence is preserved without approval.",
+        "findings": [
+          {
+            "id": "correctness-chunk-1-failure",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "reason": "Required post-review stage failed."
+          },
+          {
+            "id": "security-chunk-1-failure",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "reason": "Required post-review stage failed."
+          }
+        ],
+        "requiredActions": [
+          "Resume a source-bound independent adjudication before acceptance."
+        ],
+        "factualBasis": [
+          "Completed reviewer responses and attempts are preserved in this result."
+        ],
+        "remainingUncertainty": [
+          "adjudication:provider_failure"
+        ]
+      },
+      "findings": [
+        {
+          "id": "correctness-chunk-1-failure",
+          "status": "uncertain",
+          "severity": "high",
+          "location": null,
+          "claim": "Required reviewer evidence chunk chunk-1 did not complete."
+        },
+        {
+          "id": "security-chunk-1-failure",
+          "status": "uncertain",
+          "severity": "high",
+          "location": null,
+          "claim": "Required reviewer evidence chunk chunk-1 did not complete."
+        }
+      ]
+    }
+  ],
+  "paidReview": {
+    "capUsd": 12,
+    "providerReportedUsd": 9.19553228553,
+    "maximumLiabilityUsd": 11.90410408553,
+    "uncertainReservationsRetained": true,
+    "lockPresent": false
+  },
+  "wholeV3Accepted": false,
+  "delivery": {
+    "staged": false,
+    "committed": false,
+    "merged": false,
+    "pushed": false,
+    "deployed": false,
+    "productionDatabaseWrites": false,
+    "runtimeRestarted": false
+  },
+  "unchangedPgCore": {
+    "path": "src/pg-state.ts",
+    "sha256": "4f9830f2698ed7abc7292abc1abd79b215c6ad2f2f8b3d058a9193e01dfa8f59",
+    "priorAcceptance": "docs/reviews/2026-09-29-persistence-continuation.json",
+    "limitation": "The PostgreSQL core remains unchanged. Related local facade hashes changed; this is not a claim that the entire prior mixed manifest still matches."
+  },
+  "remaining": [
+    "Local file-backed cross-process ownership/concurrency and atomic multi-record completion remain open.",
+    "Broader node credential/rotation, dispatch/recovery, authorization and tenant acceptance remain open.",
+    "Mission orchestration and current-revision execution/evidence correlation remain open.",
+    "Workspace quota coverage and atomic admission remain open.",
+    "Production legacy namespace reconciliation, restore/rollback drills, telemetry/alerts, deployed isolation and actual cross-platform onboarding remain open."
+  ],
+  "runtime": {
+    "observedAt": "2026-09-30T10:47:38.4975673Z",
+    "v3Main": "65fd28e2f9c8c6e34bbf762f52aabdd7d6d6f578",
+    "v3MainDirty": false,
+    "v2bMain": "a4d1042a004b33098d4a439e4427d522a0c3e5bb",
+    "v2bMainDirty": false,
+    "existingV2bPid21324Alive": true,
+    "reviewPgListeners": 0,
+    "v2bHealthOk": true,
+    "railwayReady": true,
+    "railwayRevision": "65fd28e2f9c8c6e34bbf762f52aabdd7d6d6f578"
+  }
+}

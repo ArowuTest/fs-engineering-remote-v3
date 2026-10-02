@@ -49,11 +49,35 @@ export interface RunResult {
   durationMs: number;
 }
 
-function commandEnvironment(): NodeJS.ProcessEnv {
+const SENSITIVE_COMMAND_ENV = new Set([
+  'DATABASE_URL','DATABASE_PUBLIC_URL','PGPASSWORD','MONGODB_URI','MONGO_URL','REDIS_URL',
+  'SSH_AUTH_SOCK','SSH_ASKPASS','GIT_ASKPASS','GIT_ASKPASS_REQUIRE','GIT_CONFIG_GLOBAL',
+  'KUBECONFIG','DOCKER_CONFIG','GOOGLE_APPLICATION_CREDENTIALS','AWS_SHARED_CREDENTIALS_FILE',
+  'AWS_WEB_IDENTITY_TOKEN_FILE','AZURE_FEDERATED_TOKEN_FILE',
+]);
+function sensitiveCommandEnvironmentName(name:string):boolean{
+  const key=name.toUpperCase();
+  return SENSITIVE_COMMAND_ENV.has(key)
+    || /(?:^|_)(?:TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|CREDENTIALS)(?:_|$)/.test(key);
+}
+export function sanitizedCommandEnvironment(additions:NodeJS.ProcessEnv={}): NodeJS.ProcessEnv {
+  const env:NodeJS.ProcessEnv={};
+  for(const [name,value] of Object.entries(process.env))if(!sensitiveCommandEnvironmentName(name))env[name]=value;
+  for(const [name,value] of Object.entries(additions))if(!sensitiveCommandEnvironmentName(name))env[name]=value;
   const comspec = process.env.ComSpec ?? process.env.COMSPEC ?? 'C:\\Windows\\System32\\cmd.exe';
-  const env:NodeJS.ProcessEnv={...process.env,ComSpec:comspec,COMSPEC:comspec};
+  env.ComSpec=comspec;env.COMSPEC=comspec;
   if(process.platform==='win32'){const systemRoot=process.env.SystemRoot??process.env.SYSTEMROOT??'C:\\Windows',required=[`${systemRoot}\\System32\\WindowsPowerShell\\v1.0`,`${systemRoot}\\System32`],current=env.Path??env.PATH??'',parts=current.split(';').filter(Boolean),lower=new Set(parts.map(x=>x.toLowerCase()));for(const p of required)if(!lower.has(p.toLowerCase()))parts.unshift(p);env.Path=parts.join(';');env.PATH=env.Path;}
   return env;
+}
+
+const COMMAND_SECRET_NAME='(?:token|secret|password|passwd|api[-_]?key|private[-_]?key|access[-_]?key|credential|credentials)';
+export function redactCommand(command:string):string{
+  let value=command;
+  value=value.replace(new RegExp(`((?:--?${COMMAND_SECRET_NAME}|[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API[_-]?KEY|PRIVATE[_-]?KEY|ACCESS[_-]?KEY|CREDENTIALS?)[A-Z0-9_]*)\\s*(?:=|:)\\s*)([^\\s"';&|]+)`,'gi'),'$1[REDACTED]');
+  value=value.replace(new RegExp(`((?:--?${COMMAND_SECRET_NAME})\\s+)([^\\s"';&|]+)`,'gi'),'$1[REDACTED]');
+  value=value.replace(/(bearer\s+)[A-Za-z0-9._~+\/=:-]{8,}/gi,'$1[REDACTED]');
+  value=value.replace(/(https?:\/\/[^:\s\/]+:)[^@\s]+(@)/gi,'$1[REDACTED]$2');
+  return value;
 }
 
 export function resolveCommandShell(shell: string, platform = process.platform, env = process.env): string {
@@ -123,7 +147,7 @@ export class ProcessManager {
       const shell = resolveCommandShell(this.options.shell);
       const child = spawn(shell, shellArgs(shell, command), {
         cwd,
-        env: commandEnvironment(),
+        env: sanitizedCommandEnvironment(),
         windowsHide: true,
       });
       child.once('spawn', () => { spawnedAt = performance.now(); });
@@ -147,7 +171,7 @@ export class ProcessManager {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        const ended = performance.now(), telemetry={command,cwd,exitCode:null,timedOut:false,spawnLatencyMs:ended-started,executionMs:0,durationMs:ended-started};
+        const ended = performance.now(), telemetry={command:redactCommand(command),cwd,exitCode:null,timedOut:false,spawnLatencyMs:ended-started,executionMs:0,durationMs:ended-started};
         stderr = append(stderr, Buffer.from(`Failed to spawn ${shell}: ${error.message}\n`, 'utf8'));
         try { this.options.onRun?.(telemetry); } catch { /* telemetry must never affect command execution */ }
         resolve({ exitCode: null, stdout, stderr, timedOut: false, spawnLatencyMs: telemetry.spawnLatencyMs, executionMs: telemetry.executionMs, durationMs: telemetry.durationMs });
@@ -156,7 +180,7 @@ export class ProcessManager {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        const ended = performance.now(), actualSpawnedAt = spawnedAt ?? started, telemetry={command,cwd,exitCode:code,timedOut,spawnLatencyMs:Math.max(0,actualSpawnedAt-started),executionMs:Math.max(0,ended-actualSpawnedAt),durationMs:Math.max(0,ended-started)};
+        const ended = performance.now(), actualSpawnedAt = spawnedAt ?? started, telemetry={command:redactCommand(command),cwd,exitCode:code,timedOut,spawnLatencyMs:Math.max(0,actualSpawnedAt-started),executionMs:Math.max(0,ended-actualSpawnedAt),durationMs:Math.max(0,ended-started)};
         try { this.options.onRun?.(telemetry); } catch { /* telemetry must never affect command execution */ }
         resolve({ exitCode: code, stdout, stderr, timedOut, spawnLatencyMs: telemetry.spawnLatencyMs, executionMs: telemetry.executionMs, durationMs: telemetry.durationMs });
       });
@@ -167,7 +191,7 @@ export class ProcessManager {
     const shell = resolveCommandShell(this.options.shell);
     const child = spawn(shell, shellArgs(shell, command), {
       cwd,
-      env: commandEnvironment(),
+      env: sanitizedCommandEnvironment(),
       windowsHide: true,
     });
     // A spawn failure is emitted asynchronously. Always attach an error listener so
@@ -189,7 +213,7 @@ export class ProcessManager {
       exitCode: null,
       startedAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),
-      command,
+      command: redactCommand(command),
       cwd,
     };
     const add = (label: string, data: Buffer) => {

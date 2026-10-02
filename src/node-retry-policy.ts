@@ -9,7 +9,6 @@ const SAFE:Partial<Record<NodeCapability,Set<string>>>={
  engineering:new Set(['docker_status','docker_logs']),
 };
 export function nodeRetryPolicy(capability:NodeCapability,operation:string,payload:Record<string,unknown>={}):NodeRetryDecision{
- if(payload.__verification&&capability==='command'&&operation==='run')return{schemaVersion:'fs.node.retry-policy.v1',policy:'automatic',reason:'Governed verification commands are replayable after lease loss.'};
  if(SAFE[capability]?.has(operation))return{schemaVersion:'fs.node.retry-policy.v1',policy:'automatic',reason:`${capability}/${operation} is classified as replay-safe.`};
  return{schemaVersion:'fs.node.retry-policy.v1',policy:'manual',reason:`${capability}/${operation} may have side effects; lease loss requires explicit recovery before retry.`};
 }

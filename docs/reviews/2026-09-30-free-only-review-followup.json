@@ -1,0 +1,118 @@
+{
+  "observedAt": "2026-09-30T17:37:01.777595+00:00",
+  "policy": {
+    "mode": "free_only",
+    "paidModelConsent": false,
+    "paidFallback": false,
+    "existingCapUsd": 12,
+    "capIncreaseAuthorized": false
+  },
+  "quotaAtPreflight": {
+    "checked": true,
+    "freeModelDailyRequests": {
+      "used": 5,
+      "limit": 1000,
+      "remaining": 995
+    }
+  },
+  "benchmarkSelection": "Current configured task-weighted benchmark policy intersected with live zero-price OpenRouter catalogue; not a universal best-model claim.",
+  "focusedAttempts": [
+    {
+      "modelId": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "provider": "openrouter",
+      "free": true,
+      "status": "failed",
+      "kind": "timeout",
+      "scope": "model",
+      "retryAfterMs": 0
+    },
+    {
+      "modelId": "poolside/laguna-s-2.1:free",
+      "provider": "openrouter",
+      "free": true,
+      "status": "failed",
+      "kind": "rate_limited",
+      "scope": "model",
+      "retryAfterMs": 0
+    }
+  ],
+  "nativeToolCouncil": {
+    "completedAt": "2026-09-30T17:35:01.485Z",
+    "freeOnly": true,
+    "paidModelRequests": 0,
+    "paidLedgerUnchanged": true,
+    "calls": 4,
+    "successfulCalls": 0,
+    "providerReportedUsd": 0,
+    "results": [
+      {
+        "group": "node-errors",
+        "approved": false,
+        "councilId": "council-1790789611399-5807b8",
+        "failedDimensions": [
+          "correctness:chunk-1",
+          "security:chunk-1",
+          "adjudication:provider_failure"
+        ],
+        "findings": [
+          {
+            "id": "correctness-chunk-1-failure",
+            "role": "correctness",
+            "severity": "high",
+            "claim": "Required reviewer evidence chunk chunk-1 did not complete.",
+            "status": "uncertain",
+            "adjudicationStatus": "INSUFFICIENT_EVIDENCE"
+          },
+          {
+            "id": "security-chunk-1-failure",
+            "role": "security",
+            "severity": "high",
+            "claim": "Required reviewer evidence chunk chunk-1 did not complete.",
+            "status": "uncertain",
+            "adjudicationStatus": "INSUFFICIENT_EVIDENCE"
+          }
+        ],
+        "uniqueModels": []
+      },
+      {
+        "group": "local-parent",
+        "approved": false,
+        "failedDimensions": [
+          "fatal_provider_failure"
+        ],
+        "findings": [],
+        "uniqueModels": []
+      }
+    ]
+  },
+  "validCurrentSourceApproval": false,
+  "paidModelRequests": 0,
+  "paidLedgerUnchanged": true,
+  "productSourceManifestUnchanged": true,
+  "freshTargetedGate": {
+    "sessionId": "exec-muoduc0u-8176f43a",
+    "tests": 59,
+    "pass": 59,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "historicalFullGate": {
+    "sessionId": "exec-munz5y8t-fdb33b11",
+    "main": 659,
+    "postgres": 52,
+    "typecheck": "passed",
+    "rerunThisTurn": false
+  },
+  "reviewSessionsTerminal": [
+    "exec-muodu1dj-dbc43077",
+    "exec-muodwfy4-030983cb"
+  ],
+  "codeChanged": false,
+  "staged": false,
+  "committed": false,
+  "merged": false,
+  "deployed": false,
+  "productionMutations": false,
+  "nextBuildWork": "Local file-backed cross-process ownership/concurrency and atomic completion; preserve acceptance gates while using free-only reviews."
+}

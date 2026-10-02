@@ -1,16 +1,106 @@
-import crypto from 'node:crypto';import {db} from './db.js';import {hashOpaqueToken,hashPassword,issueOpaqueToken,verifyPassword} from './auth-crypto.js';
-export type WorkspaceRole='owner'|'admin'|'engineer'|'reviewer'|'viewer';export interface AuthPrincipal{userId:string;username:string;workspaceId?:string;role?:WorkspaceRole}
+import crypto from 'node:crypto';
+import {db} from './db.js';
+import {hashOpaqueToken,hashPassword,issueOpaqueToken,verifyPassword} from './auth-crypto.js';
+
+export type WorkspaceRole='owner'|'admin'|'engineer'|'reviewer'|'viewer';
+export type WorkspaceMembershipStatus='active'|'disabled'|'locked';
+export interface AuthPrincipal{userId:string;username:string;workspaceId?:string;role?:WorkspaceRole}
 const id=(p:string)=>`${p}-${crypto.randomUUID()}`;
+
 export class AuthStore{
- async invite(x:{workspaceId:string;email?:string;role?:WorkspaceRole;createdBy:string;expiresMs?:number}){const token=issueOpaqueToken(),inviteId=id('invite'),expiresAt=new Date(Date.now()+(x.expiresMs??86400000));await db().query(`INSERT INTO invitations(id,token_hash,workspace_id,intended_email,role,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)`,[inviteId,hashOpaqueToken(token),x.workspaceId,x.email?.toLowerCase()??null,x.role??'engineer',expiresAt,x.createdBy]);return {inviteId,token,expiresAt:expiresAt.toISOString()}}
- async signup(x:{token:string;username:string;email?:string;password:string}){const c=await db().connect();try{await c.query('BEGIN');const r=await c.query(`SELECT * FROM invitations WHERE token_hash=$1 AND expires_at>now() AND use_count<max_uses FOR UPDATE`,[hashOpaqueToken(x.token)]);const inv=r.rows[0];if(!inv)throw new Error('Invitation is invalid, expired, or consumed.');if(inv.intended_email&&inv.intended_email!==x.email?.toLowerCase())throw new Error('Invitation email does not match.');const userId=id('user');await c.query(`INSERT INTO users(id,username,email,password_hash) VALUES($1,$2,$3,$4)`,[userId,x.username.trim(),x.email?.toLowerCase()??null,await hashPassword(x.password)]);await c.query(`INSERT INTO workspace_memberships(workspace_id,user_id,role) VALUES($1,$2,$3)`,[inv.workspace_id,userId,inv.role]);await c.query(`UPDATE invitations SET use_count=use_count+1,consumed_at=CASE WHEN use_count+1>=max_uses THEN now() ELSE consumed_at END WHERE id=$1`,[inv.id]);await c.query('COMMIT');return {userId,workspaceId:inv.workspace_id}}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}}
- async authenticate(x:{username:string;password:string;workspaceId?:string}){const r=await db().query(`SELECT id,username,password_hash,status FROM users WHERE username=$1`,[x.username]);const u=r.rows[0];if(!u||u.status!=='active'||!await verifyPassword(x.password,u.password_hash))throw new Error('Invalid username or password.');const m=await db().query(x.workspaceId?`SELECT workspace_id,role FROM workspace_memberships WHERE user_id=$1 AND workspace_id=$2`:`SELECT workspace_id,role FROM workspace_memberships WHERE user_id=$1 ORDER BY created_at LIMIT 1`,x.workspaceId?[u.id,x.workspaceId]:[u.id]);if(!m.rows[0])throw new Error('No workspace membership.');return {userId:u.id,username:u.username,workspaceId:m.rows[0].workspace_id,role:m.rows[0].role as WorkspaceRole}}
- async login(x:{username:string;password:string;workspaceId?:string}){const principal=await this.authenticate(x);const token=issueOpaqueToken(),sessionId=id('session'),expiresAt=new Date(Date.now()+28800000);await db().query(`INSERT INTO user_sessions(id,token_hash,user_id,workspace_id,expires_at) VALUES($1,$2,$3,$4,$5)`,[sessionId,hashOpaqueToken(token),principal.userId,principal.workspaceId,expiresAt]);return {token,expiresAt:expiresAt.toISOString(),principal}}
- async resolve(token:string):Promise<AuthPrincipal|null>{const r=await db().query(`SELECT u.id user_id,u.username,s.workspace_id,m.role FROM user_sessions s JOIN users u ON u.id=s.user_id LEFT JOIN workspace_memberships m ON m.workspace_id=s.workspace_id AND m.user_id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'`,[hashOpaqueToken(token)]);const x=r.rows[0];return x?{userId:x.user_id,username:x.username,workspaceId:x.workspace_id,role:x.role}:null}
- async logout(token:string){await db().query(`UPDATE user_sessions SET revoked_at=now() WHERE token_hash=$1`,[hashOpaqueToken(token)]);return {ok:true}}
- async users(workspaceId:string){return (await db().query(`SELECT u.id,u.username,u.email,u.status,m.role FROM workspace_memberships m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=$1 ORDER BY u.username`,[workspaceId])).rows}
- async setRole(workspaceId:string,userId:string,role:WorkspaceRole){const c=await db().connect();try{await c.query('BEGIN');const current=await c.query(`SELECT role FROM workspace_memberships WHERE workspace_id=$1 AND user_id=$2 FOR UPDATE`,[workspaceId,userId]);if(!current.rowCount)throw new Error('Membership not found.');if(current.rows[0].role==='owner'&&role!=='owner'){const owners=await c.query(`SELECT count(*)::int n FROM workspace_memberships WHERE workspace_id=$1 AND role='owner'`,[workspaceId]);if(Number(owners.rows[0].n)<=1)throw new Error('Workspace must retain at least one owner.')}const r=await c.query(`UPDATE workspace_memberships SET role=$3 WHERE workspace_id=$1 AND user_id=$2 RETURNING user_id,role`,[workspaceId,userId,role]);await c.query('COMMIT');return r.rows[0]}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}}
- async setStatus(workspaceId:string,userId:string,status:'active'|'disabled'|'locked'){const c=await db().connect();try{await c.query('BEGIN');const m=await c.query(`SELECT role FROM workspace_memberships WHERE workspace_id=$1 AND user_id=$2 FOR UPDATE`,[workspaceId,userId]);if(!m.rowCount)throw new Error('User not found.');if(status!=='active'&&m.rows[0].role==='owner'){const activeOwners=await c.query(`SELECT count(*)::int n FROM workspace_memberships wm JOIN users u ON u.id=wm.user_id WHERE wm.workspace_id=$1 AND wm.role='owner' AND u.status='active'`,[workspaceId]);if(Number(activeOwners.rows[0].n)<=1)throw new Error('Workspace must retain at least one active owner.')}const r=await c.query(`UPDATE users SET status=$2,updated_at=now() WHERE id=$1 RETURNING id,status`,[userId,status]);if(!r.rowCount)throw new Error('User not found.');if(status!=='active')await c.query(`UPDATE user_sessions SET revoked_at=now() WHERE user_id=$1`,[userId]);await c.query('COMMIT');return r.rows[0]}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}}
- async resetToken(workspaceId:string,userId:string,requestedBy:string){const m=await db().query(`SELECT 1 FROM workspace_memberships WHERE workspace_id=$1 AND user_id=$2`,[workspaceId,userId]);if(!m.rowCount)throw new Error('User not found.');const token=issueOpaqueToken(),resetId=id('reset'),expiresAt=new Date(Date.now()+1800000);await db().query(`INSERT INTO password_reset_tokens(id,token_hash,user_id,expires_at,requested_by) VALUES($1,$2,$3,$4,$5)`,[resetId,hashOpaqueToken(token),userId,expiresAt,requestedBy]);return {token,expiresAt:expiresAt.toISOString()}}
- async reset(token:string,password:string){const c=await db().connect();try{await c.query('BEGIN');const r=await c.query(`SELECT id,user_id FROM password_reset_tokens WHERE token_hash=$1 AND consumed_at IS NULL AND expires_at>now() FOR UPDATE`,[hashOpaqueToken(token)]);if(!r.rows[0])throw new Error('Reset token is invalid, expired, or consumed.');await c.query(`UPDATE users SET password_hash=$1,updated_at=now() WHERE id=$2`,[await hashPassword(password),r.rows[0].user_id]);await c.query(`UPDATE password_reset_tokens SET consumed_at=now() WHERE id=$1`,[r.rows[0].id]);await c.query(`UPDATE user_sessions SET revoked_at=now() WHERE user_id=$1`,[r.rows[0].user_id]);const membership=await c.query(`SELECT workspace_id FROM workspace_memberships WHERE user_id=$1 ORDER BY created_at LIMIT 1`,[r.rows[0].user_id]);await c.query('COMMIT');return {ok:true,userId:r.rows[0].user_id,workspaceId:membership.rows[0]?.workspace_id}}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}}
+ async invite(x:{workspaceId:string;email?:string;role?:WorkspaceRole;createdBy:string;expiresMs?:number}){
+  const token=issueOpaqueToken(),inviteId=id('invite'),expiresAt=new Date(Date.now()+(x.expiresMs??86400000));
+  await db().query(`INSERT INTO invitations(id,token_hash,workspace_id,intended_email,role,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)`,[inviteId,hashOpaqueToken(token),x.workspaceId,x.email?.toLowerCase()??null,x.role??'engineer',expiresAt,x.createdBy]);
+  return{inviteId,token,expiresAt:expiresAt.toISOString()};
+ }
+ async signup(x:{token:string;username:string;email?:string;password:string}){
+  const c=await db().connect();
+  try{
+   await c.query('BEGIN');
+   const r=await c.query(`SELECT * FROM invitations WHERE token_hash=$1 AND expires_at>now() AND use_count<max_uses FOR UPDATE`,[hashOpaqueToken(x.token)]),inv=r.rows[0];
+   if(!inv)throw new Error('Invitation is invalid, expired, or consumed.');
+   if(inv.intended_email&&inv.intended_email!==x.email?.toLowerCase())throw new Error('Invitation email does not match.');
+   const userId=id('user');
+   await c.query(`INSERT INTO users(id,username,email,password_hash) VALUES($1,$2,$3,$4)`,[userId,x.username.trim(),x.email?.toLowerCase()??null,await hashPassword(x.password)]);
+   await c.query(`INSERT INTO workspace_memberships(workspace_id,user_id,role) VALUES($1,$2,$3)`,[inv.workspace_id,userId,inv.role]);
+   await c.query(`UPDATE invitations SET use_count=use_count+1,consumed_at=CASE WHEN use_count+1>=max_uses THEN now() ELSE consumed_at END WHERE id=$1`,[inv.id]);
+   await c.query('COMMIT');return{userId,workspaceId:inv.workspace_id};
+  }catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}
+ }
+ async authenticate(x:{username:string;password:string;workspaceId?:string}){
+  const r=await db().query(`SELECT id,username,password_hash,status FROM users WHERE username=$1`,[x.username]),u=r.rows[0];
+  if(!u||u.status!=='active'||!await verifyPassword(x.password,u.password_hash))throw new Error('Invalid username or password.');
+  const m=await db().query(x.workspaceId?
+   `SELECT workspace_id,role FROM workspace_memberships WHERE user_id=$1 AND workspace_id=$2 AND status='active'`:
+   `SELECT workspace_id,role FROM workspace_memberships WHERE user_id=$1 AND status='active' ORDER BY created_at LIMIT 1`,
+   x.workspaceId?[u.id,x.workspaceId]:[u.id]);
+  if(!m.rows[0])throw new Error('No active workspace membership.');
+  return{userId:u.id,username:u.username,workspaceId:m.rows[0].workspace_id,role:m.rows[0].role as WorkspaceRole};
+ }
+ async login(x:{username:string;password:string;workspaceId?:string}){
+  const principal=await this.authenticate(x),token=issueOpaqueToken(),sessionId=id('session'),expiresAt=new Date(Date.now()+28800000);
+  await db().query(`INSERT INTO user_sessions(id,token_hash,user_id,workspace_id,expires_at) VALUES($1,$2,$3,$4,$5)`,[sessionId,hashOpaqueToken(token),principal.userId,principal.workspaceId,expiresAt]);
+  return{token,expiresAt:expiresAt.toISOString(),principal};
+ }
+ async resolve(token:string):Promise<AuthPrincipal|null>{
+  const r=await db().query(`SELECT u.id user_id,u.username,s.workspace_id,m.role FROM user_sessions s JOIN users u ON u.id=s.user_id JOIN workspace_memberships m ON m.workspace_id=s.workspace_id AND m.user_id=s.user_id AND m.status='active' WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'`,[hashOpaqueToken(token)]),x=r.rows[0];
+  return x?{userId:x.user_id,username:x.username,workspaceId:x.workspace_id,role:x.role}:null;
+ }
+ async logout(token:string){await db().query(`UPDATE user_sessions SET revoked_at=now() WHERE token_hash=$1`,[hashOpaqueToken(token)]);return{ok:true}}
+ async users(workspaceId:string){return(await db().query(`SELECT u.id,u.username,u.email,m.status,u.status account_status,m.role FROM workspace_memberships m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=$1 ORDER BY u.username`,[workspaceId])).rows}
+ async setRole(workspaceId:string,userId:string,role:WorkspaceRole){
+  const c=await db().connect();
+  try{
+   await c.query('BEGIN');
+   const current=await c.query(`SELECT role,status FROM workspace_memberships WHERE workspace_id=$1 AND user_id=$2 FOR UPDATE`,[workspaceId,userId]);
+   if(!current.rowCount)throw new Error('Membership not found.');
+   if(current.rows[0].role==='owner'&&current.rows[0].status==='active'&&role!=='owner'){
+    const owners=await c.query(`SELECT count(*)::int n FROM workspace_memberships WHERE workspace_id=$1 AND role='owner' AND status='active'`,[workspaceId]);
+    if(Number(owners.rows[0].n)<=1)throw new Error('Workspace must retain at least one active owner.');
+   }
+   const r=await c.query(`UPDATE workspace_memberships SET role=$3 WHERE workspace_id=$1 AND user_id=$2 RETURNING user_id,role,status`,[workspaceId,userId,role]);
+   await c.query('COMMIT');return r.rows[0];
+  }catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}
+ }
+ async setStatus(workspaceId:string,userId:string,status:WorkspaceMembershipStatus){
+  const c=await db().connect();
+  try{
+   await c.query('BEGIN');
+   const m=await c.query(`SELECT role,status FROM workspace_memberships WHERE workspace_id=$1 AND user_id=$2 FOR UPDATE`,[workspaceId,userId]);
+   if(!m.rowCount)throw new Error('User not found.');
+   if(status!=='active'&&m.rows[0].status==='active'&&m.rows[0].role==='owner'){
+    const activeOwners=await c.query(`SELECT count(*)::int n FROM workspace_memberships WHERE workspace_id=$1 AND role='owner' AND status='active'`,[workspaceId]);
+    if(Number(activeOwners.rows[0].n)<=1)throw new Error('Workspace must retain at least one active owner.');
+   }
+   const r=await c.query(`UPDATE workspace_memberships SET status=$3 WHERE workspace_id=$1 AND user_id=$2 RETURNING user_id,status`,[workspaceId,userId,status]);
+   if(status!=='active')await c.query(`UPDATE user_sessions SET revoked_at=now() WHERE workspace_id=$1 AND user_id=$2 AND revoked_at IS NULL`,[workspaceId,userId]);
+   await c.query('COMMIT');return r.rows[0];
+  }catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}
+ }
+ async resetToken(workspaceId:string,userId:string,requestedBy:string){
+  const memberships=await db().query(`SELECT workspace_id,status FROM workspace_memberships WHERE user_id=$1 ORDER BY created_at`,[userId]);
+  const target=memberships.rows.find((x:any)=>x.workspace_id===workspaceId);
+  if(!target||target.status!=='active')throw new Error('User not found.');
+  if(memberships.rowCount!==1)throw new Error('Password reset for multi-workspace users requires account-level recovery.');
+  const token=issueOpaqueToken(),resetId=id('reset'),expiresAt=new Date(Date.now()+1800000);
+  await db().query(`INSERT INTO password_reset_tokens(id,token_hash,user_id,workspace_id,expires_at,requested_by) VALUES($1,$2,$3,$4,$5,$6)`,[resetId,hashOpaqueToken(token),userId,workspaceId,expiresAt,requestedBy]);
+  return{token,expiresAt:expiresAt.toISOString()};
+ }
+ async reset(token:string,password:string){
+  const c=await db().connect();
+  try{
+   await c.query('BEGIN');
+   const r=await c.query(`SELECT id,user_id,workspace_id FROM password_reset_tokens WHERE token_hash=$1 AND consumed_at IS NULL AND expires_at>now() FOR UPDATE`,[hashOpaqueToken(token)]),reset=r.rows[0];
+   if(!reset)throw new Error('Reset token is invalid, expired, or consumed.');
+   if(reset.workspace_id){
+    const memberships=await c.query(`SELECT workspace_id,status FROM workspace_memberships WHERE user_id=$1`,[reset.user_id]);
+    if(memberships.rowCount!==1||memberships.rows[0].workspace_id!==reset.workspace_id||memberships.rows[0].status!=='active')throw new Error('Reset token no longer has account-level authority.');
+   }
+   await c.query(`UPDATE users SET password_hash=$1,updated_at=now() WHERE id=$2`,[await hashPassword(password),reset.user_id]);
+   await c.query(`UPDATE password_reset_tokens SET consumed_at=now() WHERE id=$1`,[reset.id]);
+   await c.query(`UPDATE user_sessions SET revoked_at=now() WHERE user_id=$1`,[reset.user_id]);
+   const membership=await c.query(`SELECT workspace_id FROM workspace_memberships WHERE user_id=$1 AND status='active' ORDER BY created_at LIMIT 1`,[reset.user_id]);
+   await c.query('COMMIT');return{ok:true,userId:reset.user_id,workspaceId:membership.rows[0]?.workspace_id};
+  }catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}
+ }
 }

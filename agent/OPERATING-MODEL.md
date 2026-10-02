@@ -21,7 +21,7 @@ Never treat a reviewer timeout as permission to skip verification. Never claim c
 - No reset, clean, rebase, amend, force operations or destructive history changes without explicit approval.
 - Prefer existing/reference implementation assets over rebuilding working features from scratch.
 - Only commit accepted work.
-- FS Remote deliberately does not expose `git push`.
+- Git push is available through the governed tools, but requires the applicable explicit delivery authorization. Do not push unaccepted work or force-push without explicit approval.
 
 ## Skills
 

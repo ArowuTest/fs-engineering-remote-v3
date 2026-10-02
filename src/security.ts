@@ -1,8 +1,10 @@
 import path from 'node:path';
+import fs from 'node:fs';
 
 export interface RootConfig {
   name: string;
   path: string;
+  workspaceId?: string;
   readOnly?: boolean;
   allowSecrets?: boolean;
 }
@@ -45,6 +47,21 @@ export function resolveInRoot(root: RootConfig, relativePath = '.'): string {
   const prefix = `${baseKey}${path.sep}`;
   if (candidateKey !== baseKey && !candidateKey.startsWith(prefix)) {
     throw new Error('Path resolves outside configured root.');
+  }
+  // A lexical path inside the root is not enough: junctions/symlinks may lead outside.
+  // Explicitly configured root aliases are resolved once; links below that boundary
+  // are rejected, including dangling links and links encountered on a new write path.
+  if(fs.existsSync(base)){
+    const canonicalBase=normalizedForCompare(fs.realpathSync.native(base));
+    const relative=path.relative(base,candidate);let cursor=base;
+    for(const component of relative.split(path.sep).filter(Boolean)){
+      cursor=path.join(cursor,component);
+      let entry:fs.Stats;
+      try{entry=fs.lstatSync(cursor)}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')break;throw error}
+      if(entry.isSymbolicLink())throw new Error('Filesystem links/reparse points below a configured root are not permitted.');
+      const physical=normalizedForCompare(fs.realpathSync.native(cursor));
+      if(physical!==canonicalBase&&!physical.startsWith(canonicalBase+path.sep))throw new Error('Filesystem target resolves outside configured root.');
+    }
   }
   return candidate;
 }
