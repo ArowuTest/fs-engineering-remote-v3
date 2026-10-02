@@ -48,7 +48,7 @@ export class MissionManager{
    for(const record of completion.evidence){assertLocalRecordParent(record,parent);records.push(record)}
   }
   const ids=new Set<string>();for(const record of records){if(ids.has(record.id))throw new Error('Duplicate local evidence identity.');ids.add(record.id)}
-  return records.sort((a,b)=>a.observedAt.localeCompare(b.observedAt)||a.id.localeCompare(b.id));
+  return records.map((record,index)=>({record,index})).sort((a,b)=>a.record.observedAt.localeCompare(b.record.observedAt)||a.index-b.index).map(x=>x.record);
  }
  async summary(id:string){const mission=await this.get(id),evidence=await this.evidence(id);return {mission,evidence,counts:{steps:mission.steps.length,completed:mission.steps.filter(x=>x.status==='completed').length,evidence:evidence.length,passedEvidence:evidence.filter(x=>x.status==='pass').length,failedEvidence:evidence.filter(x=>x.status==='fail').length},resumeHint:mission.status==='blocked'?'Resolve blocker then resume.':mission.status==='awaiting_approval'?'Approval required before execution continues.':mission.status==='completed'?'Mission complete; retain evidence for acceptance.':'Call next to continue from durable state.'}}
 }
