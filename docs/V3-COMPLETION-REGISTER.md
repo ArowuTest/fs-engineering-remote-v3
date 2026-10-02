@@ -102,3 +102,12 @@ Current exact-source full gate after command/session metadata redaction: `exec-m
 The previous credential-boundary tranche also now redacts command-line token/secret/password/API-key-like material from returned and persisted process/session metadata. This protects session listings, polling responses and telemetry metadata from obvious command-line secret leakage while preserving the exact command used for execution. It does not claim perfect arbitrary-secret detection and does not convert repository commands into an OS sandbox.
 
 No files were staged, committed, merged, pushed or deployed. No production database writes were performed. V2B and the live Railway application revision were not restarted or modified. Independent current-source acceptance remains blocked under the free-only review policy because the currently available free-review route is OpenRouter-backed and returns `authorization_denied`.
+
+
+## PR branch CI closure - 2 October 2026
+
+PR #1 (`fix/v3-independent-review-20260929`) is pushed and GitHub CI-green on current HEAD `c0f64080eb215c8575983df52ed55fb608ce35fa` (`fix: preserve same-timestamp evidence order`). GitHub Actions workflow `ci` run #102 / run id `37061623368` completed with conclusion `success`.
+
+The production-readiness candidate was locally green before PR CI fixes: TypeScript + main **685/685**, PostgreSQL **75/75**, and local queue/lock stress **35/35**. GitHub then exposed two cross-platform contract issues, both fixed and pushed: `4ca9a2e` canonicalized vendored Laya hashes across CRLF/LF checkouts, and `c0f6408` preserved local evidence append order when sequential records share the same millisecond timestamp on fast Linux runners.
+
+This records source/test closure for the pushed PR branch only. It does not merge, deploy, restart V2B, or mutate Railway/production DB. Independent current-source review and production DB recovery/PITR remain open launch blockers.
